@@ -32,7 +32,7 @@ class RAGModelExtractor:
         self,
         openai_api_key: str = "",
         llm_model: str = "google/gemma-4-31b-it",
-        embedding_model: str = "Qwen/Qwen3-Embedding-0.6B",
+        embedding_model: str = "google/embeddinggemma-300m",
         base_url: str = "https://openrouter.ai/api/v1",
         temperature: float = 0.1,
         extra_headers: Dict[str, str] | None = None,
