@@ -1,11 +1,14 @@
 import json
 import os
+import sys
 import time
 
 from dotenv import load_dotenv
 
-from rag_pipeline import RAGModelExtractor
-from topic_analysis import TopicAnalyzer
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
+
+from llm_survey.rag_pipeline import RAGModelExtractor
+from llm_survey.topic_analysis import TopicAnalyzer
 
 
 def main() -> None:
@@ -71,3 +74,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
