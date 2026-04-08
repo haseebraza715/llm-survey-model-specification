@@ -8,12 +8,11 @@ from typing import Dict, Any, List
 import sys
 import os
 
-# Add parent directory to path to import modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add src directory to import package modules
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from rag_pipeline import RAGModelExtractor
-from topic_analysis import TopicAnalyzer
-from utils.preprocess import process_survey_data
+from llm_survey.rag_pipeline import RAGModelExtractor
+from llm_survey.topic_analysis import TopicAnalyzer
 
 # Page configuration
 st.set_page_config(

@@ -7,20 +7,23 @@ Main entry point for the pipeline
 import os
 import argparse
 import json
+import sys
 from typing import Any, Dict
 from dotenv import load_dotenv
+
+# Ensure src package is importable in local runs.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 # Load environment variables
 load_dotenv()
 
-from rag_pipeline import RAGModelExtractor
-from utils.preprocess import process_survey_data
+from llm_survey.rag_pipeline import RAGModelExtractor
 
 # Import TopicAnalyzer only when needed
 def get_topic_analyzer():
     """Import TopicAnalyzer only when needed to avoid dependency issues."""
     try:
-        from topic_analysis import TopicAnalyzer
+        from llm_survey.topic_analysis import TopicAnalyzer
         return TopicAnalyzer
     except ImportError as e:
         print(f"Warning: Topic analysis not available due to dependency issue: {e}")
