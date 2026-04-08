@@ -68,7 +68,7 @@ class TopicAnalyzer:
                 stop_words='english',
                 use_maxsum=True,
                 nr_candidates=20,
-                top_k=top_k
+                top_n=top_k
             )
             keywords[f"doc_{i}"] = doc_keywords
         

@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import Any, Dict, List
 
 import chromadb
@@ -126,20 +127,36 @@ class RAGModelExtractor:
     def _extract_yaml_with_validation(self, prompt: str) -> Dict[str, Any]:
         last_error = "Unknown parsing error"
         last_response = ""
-        for _ in range(self.max_retries + 1):
-            completion = self.client.chat.completions.create(
-                model=self.llm_model,
-                temperature=self.temperature,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Return only valid YAML. No markdown or commentary.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            raw_response = completion.choices[0].message.content or ""
+        for attempt in range(self.max_retries + 1):
+            try:
+                completion = self.client.chat.completions.create(
+                    model=self.llm_model,
+                    temperature=self.temperature,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Return only valid YAML. No markdown or commentary.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                )
+                raw_response = self._safe_completion_text(completion)
+            except Exception as err:
+                raw_response = ""
+                last_error = f"OpenRouter request failed: {err}"
+
             last_response = raw_response
+            if not raw_response.strip():
+                if attempt < self.max_retries:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                return {
+                    "model": None,
+                    "raw_response": last_response,
+                    "success": False,
+                    "error": last_error or "Empty response from LLM.",
+                }
+
             try:
                 parsed = yaml.safe_load(raw_response)
                 scientific_model = ScientificModel.model_validate(parsed)
@@ -150,12 +167,34 @@ class RAGModelExtractor:
                 }
             except (yaml.YAMLError, ValidationError, TypeError, ValueError) as err:
                 last_error = str(err)
+                if attempt < self.max_retries:
+                    time.sleep(1.5 * (attempt + 1))
         return {
             "model": None,
             "raw_response": last_response,
             "success": False,
             "error": last_error,
         }
+
+    def _safe_completion_text(self, completion: Any) -> str:
+        """Extract completion text defensively across provider edge cases."""
+        choices = getattr(completion, "choices", None)
+        if not choices:
+            return ""
+        first = choices[0]
+        message = getattr(first, "message", None)
+        content = getattr(message, "content", None) if message is not None else None
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: List[str] = []
+            for part in content:
+                if isinstance(part, dict):
+                    text = part.get("text")
+                    if isinstance(text, str):
+                        parts.append(text)
+            return "\n".join(parts).strip()
+        return ""
 
     def extract_model_from_chunk(
         self,
@@ -211,15 +250,18 @@ class RAGModelExtractor:
         return results
     
     def _call_yaml(self, prompt: str) -> Dict[str, Any]:
-        completion = self.client.chat.completions.create(
-            model=self.llm_model,
-            temperature=self.temperature,
-            messages=[
-                {"role": "system", "content": "Return only valid YAML. No markdown."},
-                {"role": "user", "content": prompt},
-            ],
-        )
-        raw_response = completion.choices[0].message.content or ""
+        try:
+            completion = self.client.chat.completions.create(
+                model=self.llm_model,
+                temperature=self.temperature,
+                messages=[
+                    {"role": "system", "content": "Return only valid YAML. No markdown."},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            raw_response = self._safe_completion_text(completion)
+        except Exception as err:
+            return {"payload": None, "raw_response": "", "success": False, "error": str(err)}
         try:
             return {"payload": yaml.safe_load(raw_response), "raw_response": raw_response, "success": True}
         except yaml.YAMLError as err:
