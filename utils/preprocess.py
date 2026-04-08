@@ -5,11 +5,16 @@ from typing import List, Dict, Any
 import pandas as pd
 from textblob import TextBlob
 
-# Download required NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
+def ensure_nltk_resources() -> None:
+    """Lazy-download tokenizer resources only when needed."""
+    try:
+        nltk.data.find("tokenizers/punkt")
+    except LookupError:
+        nltk.download("punkt", quiet=True)
+    try:
+        nltk.data.find("tokenizers/punkt_tab")
+    except LookupError:
+        nltk.download("punkt_tab", quiet=True)
 
 def clean_text(text: str) -> str:
     """Clean and normalize text."""
@@ -21,6 +26,7 @@ def clean_text(text: str) -> str:
 
 def chunk_text(text: str, max_tokens: int = 500, overlap: int = 50) -> List[str]:
     """Break text into overlapping chunks."""
+    ensure_nltk_resources()
     sentences = sent_tokenize(text)
     chunks = []
     current_chunk = []
@@ -46,6 +52,7 @@ def chunk_text(text: str, max_tokens: int = 500, overlap: int = 50) -> List[str]
 
 def extract_metadata(text: str, speaker_id: str = None, timestamp: str = None) -> Dict[str, Any]:
     """Extract metadata from text."""
+    ensure_nltk_resources()
     blob = TextBlob(text)
     
     # Handle NaN values from pandas

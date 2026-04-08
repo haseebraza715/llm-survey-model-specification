@@ -7,8 +7,7 @@ Main entry point for the pipeline
 import os
 import argparse
 import json
-import yaml
-from typing import Dict, Any, List
+from typing import Any, Dict
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -29,18 +28,20 @@ def get_topic_analyzer():
 
 def run_complete_pipeline(
     input_file: str,
-    groq_api_key: str = None,
+    openrouter_api_key: str = "",
     use_rag: bool = True,
     perform_topic_analysis: bool = True,
     output_dir: str = "outputs",
-    llm_model: str = "llama3-70b-8192"
+    llm_model: str = "google/gemma-4-31b-it",
+    base_url: str = "https://openrouter.ai/api/v1",
+    extra_headers: Dict[str, str] | None = None,
 ) -> Dict[str, Any]:
     """
     Run the complete pipeline from data processing to model extraction.
     
     Args:
         input_file: Path to input data file
-        openai_api_key: OpenAI API key
+        openrouter_api_key: OpenRouter API key
         use_rag: Whether to use RAG enhancement
         perform_topic_analysis: Whether to perform topic analysis
         output_dir: Output directory for results
@@ -54,9 +55,11 @@ def run_complete_pipeline(
     
     # Initialize extractor
     extractor = RAGModelExtractor(
-        groq_api_key=groq_api_key or os.getenv("GROQ_API_KEY"),
+        openai_api_key=openrouter_api_key or os.getenv("OPENROUTER_API_KEY", ""),
         llm_model=llm_model,
-        temperature=0.1
+        base_url=base_url,
+        extra_headers=extra_headers or {},
+        temperature=0.1,
     )
     
     # Step 1: Process and store data
@@ -85,6 +88,7 @@ def run_complete_pipeline(
         TopicAnalyzer = get_topic_analyzer()
         if TopicAnalyzer:
             topic_analyzer = TopicAnalyzer(
+                embedding_model=extractor.embedding_model_name,
                 nr_topics=10,
                 min_topic_size=5
             )
@@ -160,9 +164,9 @@ def run_interactive_mode():
         return
     
     # Get API key
-    api_key = input("Enter Groq API key (or press Enter to use environment variable): ").strip()
+    api_key = input("Enter OpenRouter API key (or press Enter to use environment variable): ").strip()
     if not api_key:
-        api_key = os.getenv("GROQ_API_KEY")
+        api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             print("No API key provided")
             return
@@ -175,7 +179,7 @@ def run_interactive_mode():
     try:
         results = run_complete_pipeline(
             input_file=input_file,
-            openai_api_key=api_key,
+            openrouter_api_key=api_key,
             use_rag=use_rag,
             perform_topic_analysis=perform_topic_analysis
         )
@@ -224,13 +228,16 @@ def create_sample_data():
 def main():
     parser = argparse.ArgumentParser(description="LLM Model Specification Generator")
     parser.add_argument("--input", "-i", help="Input file path")
-    parser.add_argument("--api-key", "-k", help="Groq API key")
+    parser.add_argument("--api-key", "-k", help="OpenRouter API key")
     parser.add_argument("--no-rag", action="store_true", help="Disable RAG enhancement")
     parser.add_argument("--no-topic-analysis", action="store_true", help="Disable topic analysis")
     parser.add_argument("--interactive", "-I", action="store_true", help="Run in interactive mode")
     parser.add_argument("--create-sample", action="store_true", help="Create sample data")
     parser.add_argument("--output-dir", "-o", default="outputs", help="Output directory")
-    parser.add_argument("--llm-model", default="llama3-70b-8192", help="Groq model name (default: llama3-70b-8192)")
+    parser.add_argument("--llm-model", default="google/gemma-4-31b-it", help="OpenRouter model name")
+    parser.add_argument("--base-url", default="https://openrouter.ai/api/v1", help="OpenRouter-compatible base URL")
+    parser.add_argument("--http-referer", default="", help="Optional HTTP Referer header for OpenRouter")
+    parser.add_argument("--x-title", default="", help="Optional X-Title header for OpenRouter")
     
     args = parser.parse_args()
     
@@ -252,13 +259,21 @@ def main():
         return
     
     try:
+        extra_headers: Dict[str, str] = {}
+        if args.http_referer:
+            extra_headers["HTTP-Referer"] = args.http_referer
+        if args.x_title:
+            extra_headers["X-Title"] = args.x_title
+
         results = run_complete_pipeline(
             input_file=args.input,
-            groq_api_key=args.api_key,
+            openrouter_api_key=args.api_key,
             use_rag=not args.no_rag,
             perform_topic_analysis=not args.no_topic_analysis,
             output_dir=args.output_dir,
-            llm_model=args.llm_model
+            llm_model=args.llm_model,
+            base_url=args.base_url,
+            extra_headers=extra_headers,
         )
         print("\nPipeline completed successfully!")
         

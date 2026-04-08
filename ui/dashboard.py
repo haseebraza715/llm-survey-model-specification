@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import json
 import yaml
-import os
 import plotly.express as px
 import plotly.graph_objects as go
 from typing import Dict, Any, List
@@ -61,7 +60,11 @@ def main():
         
         # Model settings
         st.subheader("Model Settings")
-        llm_model = st.selectbox("LLM Model", ["openai/gpt-4o", "gpt-4", "gpt-3.5-turbo"], index=0)
+        llm_model = st.selectbox(
+            "LLM Model",
+            ["google/gemma-4-31b-it", "openai/gpt-4o-mini", "meta-llama/llama-3.3-70b-instruct"],
+            index=0
+        )
         temperature = st.slider("Temperature", 0.0, 1.0, 0.1, 0.1)
         base_url = st.text_input("Base URL", value="https://openrouter.ai/api/v1", help="Base URL for OpenRouter API")
         referer = st.text_input("HTTP Referer (optional)", value="", help="Site URL for OpenRouter rankings")
@@ -152,7 +155,7 @@ def main():
                                 st.dataframe(sample_df[['id', 'text', 'metadata']])
                                 
                             else:
-                                st.error("Please enter your OpenAI API key in the sidebar")
+                                st.error("Please enter your OpenRouter API key in the sidebar")
                                 
                         except Exception as e:
                             st.error(f"Error processing data: {str(e)}")
@@ -194,7 +197,7 @@ def main():
                             st.success(f"Processed {len(st.session_state.processed_data)} text chunks")
                             
                         else:
-                            st.error("Please enter your OpenAI API key in the sidebar")
+                            st.error("Please enter your OpenRouter API key in the sidebar")
                             
                     except Exception as e:
                         st.error(f"Error processing text: {str(e)}")
@@ -240,7 +243,7 @@ def main():
                             st.success(f"Processed {len(st.session_state.processed_data)} text chunks")
                             
                         else:
-                            st.error("Please enter your OpenAI API key in the sidebar")
+                            st.error("Please enter your OpenRouter API key in the sidebar")
                             
                     except Exception as e:
                         st.error(f"Error processing sample data: {str(e)}")

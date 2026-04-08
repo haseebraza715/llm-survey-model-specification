@@ -1,6 +1,6 @@
 # LLM Model Specification Generator
 
-Extract structured scientific models from qualitative survey data using LLMs and RAG.
+Extract structured scientific models from qualitative survey data using LLMs, semantic chunking, and RAG.
 
 ## Installation
 
@@ -14,10 +14,10 @@ pip install -r requirements.txt
 
 ```bash
 # Run with sample data
-python main.py --input data/raw/synthetic_workplace_survey.csv
+python main.py --input data/raw/synthetic_workplace_survey.csv --api-key YOUR_OPENROUTER_KEY
 
 # Launch dashboard
-python3 -m streamlit run ui/simple_results_dashboard.py
+python -m streamlit run ui/dashboard.py
 ```
 
 ## Usage
@@ -25,7 +25,7 @@ python3 -m streamlit run ui/simple_results_dashboard.py
 ### Command Line
 
 ```bash
-python main.py --input your_data.csv --llm-model llama3-70b-8192
+python main.py --input your_data.csv --llm-model google/gemma-4-31b-it
 ```
 
 ### Python API
@@ -33,7 +33,7 @@ python main.py --input your_data.csv --llm-model llama3-70b-8192
 ```python
 from rag_pipeline import RAGModelExtractor
 
-extractor = RAGModelExtractor(groq_api_key="your-key")
+extractor = RAGModelExtractor(openai_api_key="your-openrouter-key")
 processed_chunks = extractor.process_and_store_data("data.csv")
 results = extractor.extract_models_from_all_chunks()
 ```
@@ -56,6 +56,6 @@ Hypotheses:
 
 ## Requirements
 
-- Python 3.9+
-- Groq API key
+- Python 3.10+
+- OpenRouter API key
 - Dependencies in requirements.txt 
