@@ -3,6 +3,7 @@
 LLM Model Specification Generator
 Main entry point for the pipeline
 """
+from __future__ import annotations
 
 import os
 import argparse
@@ -38,6 +39,7 @@ def run_complete_pipeline(
     llm_model: str = "google/gemma-4-31b-it",
     base_url: str = "https://openrouter.ai/api/v1",
     extra_headers: Dict[str, str] | None = None,
+    enable_literature_retrieval: bool = True,
 ) -> Dict[str, Any]:
     """
     Run the complete pipeline from data processing to model extraction.
@@ -63,6 +65,7 @@ def run_complete_pipeline(
         base_url=base_url,
         extra_headers=extra_headers or {},
         temperature=0.1,
+        enable_literature_retrieval=enable_literature_retrieval,
     )
     
     # Step 1: Process and store data
@@ -117,6 +120,7 @@ def run_complete_pipeline(
             'input_file': input_file,
             'use_rag': use_rag,
             'perform_topic_analysis': perform_topic_analysis,
+            'enable_literature_retrieval': enable_literature_retrieval,
             'total_chunks': len(processed_chunks)
         },
         'extraction_results': {
@@ -161,7 +165,7 @@ def run_interactive_mode():
     print("=" * 30)
     
     # Get input file
-    input_file = input("Enter path to input file (CSV or TXT): ").strip()
+    input_file = input("Enter path to input file (CSV/TXT/PDF/DOCX): ").strip()
     if not os.path.exists(input_file):
         print(f"File not found: {input_file}")
         return
@@ -176,6 +180,7 @@ def run_interactive_mode():
     
     # Get options
     use_rag = input("Use RAG enhancement? (y/n, default: y): ").strip().lower() != 'n'
+    use_literature = input("Enable literature retrieval? (y/n, default: y): ").strip().lower() != 'n'
     perform_topic_analysis = input("Perform topic analysis? (y/n, default: y): ").strip().lower() != 'n'
     
     # Run pipeline
@@ -184,7 +189,8 @@ def run_interactive_mode():
             input_file=input_file,
             openrouter_api_key=api_key,
             use_rag=use_rag,
-            perform_topic_analysis=perform_topic_analysis
+            perform_topic_analysis=perform_topic_analysis,
+            enable_literature_retrieval=use_literature,
         )
         print("\nPipeline completed successfully!")
         
@@ -239,6 +245,7 @@ def main():
     parser.add_argument("--output-dir", "-o", default="outputs", help="Output directory")
     parser.add_argument("--llm-model", default="google/gemma-4-31b-it", help="OpenRouter model name")
     parser.add_argument("--base-url", default="https://openrouter.ai/api/v1", help="OpenRouter-compatible base URL")
+    parser.add_argument("--no-literature", action="store_true", help="Disable literature retrieval/enrichment")
     parser.add_argument("--http-referer", default="", help="Optional HTTP Referer header for OpenRouter")
     parser.add_argument("--x-title", default="", help="Optional X-Title header for OpenRouter")
     
@@ -277,6 +284,7 @@ def main():
             llm_model=args.llm_model,
             base_url=args.base_url,
             extra_headers=extra_headers,
+            enable_literature_retrieval=not args.no_literature,
         )
         print("\nPipeline completed successfully!")
         

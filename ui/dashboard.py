@@ -77,6 +77,7 @@ def main():
         # RAG settings
         st.subheader("RAG Settings")
         use_rag = st.checkbox("Use RAG Enhancement", value=True)
+        use_literature = st.checkbox("Use Literature Retrieval", value=True)
         num_context_docs = st.slider("Number of Context Documents", 1, 10, 3)
         
         # Topic analysis settings
@@ -111,8 +112,8 @@ def main():
         if upload_option == "Upload CSV/Text File":
             uploaded_file = st.file_uploader(
                 "Upload your survey data",
-                type=['csv', 'txt'],
-                help="Upload CSV with 'text' or 'response' column, or plain text file"
+                type=['csv', 'txt', 'pdf', 'docx'],
+                help="Upload CSV/TXT/PDF/DOCX input"
             )
             
             if uploaded_file is not None:
@@ -136,7 +137,8 @@ def main():
                                     llm_model=llm_model,
                                     temperature=temperature,
                                     base_url=base_url,
-                                    extra_headers=extra_headers
+                                    extra_headers=extra_headers,
+                                    enable_literature_retrieval=use_literature,
                                 )
                                 
                                 # Process and store data
@@ -183,7 +185,8 @@ def main():
                                 llm_model=llm_model,
                                 temperature=temperature,
                                 base_url=base_url,
-                                extra_headers=extra_headers
+                                extra_headers=extra_headers,
+                                enable_literature_retrieval=use_literature,
                             )
                             
                             # Process data
@@ -229,7 +232,8 @@ def main():
                                 llm_model=llm_model,
                                 temperature=temperature,
                                 base_url=base_url,
-                                extra_headers=extra_headers
+                                extra_headers=extra_headers,
+                                enable_literature_retrieval=use_literature,
                             )
                             
                             # Process data

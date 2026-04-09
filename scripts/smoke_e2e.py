@@ -22,7 +22,7 @@ def main() -> None:
     checkpoints = []
 
     t0 = time.time()
-    extractor = RAGModelExtractor(openai_api_key=api_key)
+    extractor = RAGModelExtractor(openai_api_key=api_key, enable_literature_retrieval=False)
     checkpoints.append({"step": "init_extractor", "seconds": round(time.time() - t0, 2)})
 
     t0 = time.time()
@@ -74,4 +74,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

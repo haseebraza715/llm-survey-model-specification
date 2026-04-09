@@ -1,5 +1,6 @@
 # Core extraction + RAG stack
 openai>=1.52.0
+instructor>=1.4.0
 llama-index-core>=0.12.0
 llama-index-vector-stores-chroma>=0.4.0
 llama-index-embeddings-huggingface>=0.5.0
@@ -7,10 +8,14 @@ llama-index-embeddings-huggingface>=0.5.0
 # Vector store and embeddings
 sentence-transformers>=3.0.0
 chromadb>=0.5.0
+diskcache>=5.6.0
 
 # Text processing
 nltk>=3.8.1
 textblob>=0.17.1
+langdetect>=1.0.9
+pdfplumber>=0.10.0
+python-docx>=1.1.0
 
 # Thematic analysis
 bertopic>=0.16.0

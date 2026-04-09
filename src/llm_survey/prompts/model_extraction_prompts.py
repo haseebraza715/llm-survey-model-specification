@@ -170,6 +170,39 @@ AdditionalConsiderations:
   - Consideration2: Another consideration"""
 
 
+EXTRACTION_SYSTEM_PROMPT = """You are a senior qualitative research extraction assistant.
+
+Return only schema-valid JSON for the requested response model.
+Keep outputs grounded in the provided chunk text.
+Use survey and literature context only to improve precision, never to invent unsupported claims.
+Always populate the gaps field with concrete missing-information items when appropriate."""
+
+
+EXTRACTION_USER_PROMPT = """Extract a structured scientific model from the chunk below.
+
+Chunk Text:
+{chunk_text}
+
+Survey Context (nearest survey chunks):
+{survey_context}
+
+Literature Context (nearest paper snippets):
+{literature_context}
+
+Instructions:
+1. Extract variables, relationships, hypotheses, and moderators explicitly stated or strongly implied.
+2. Relationship direction must be one of: positive, negative, unclear, conditional.
+3. Include supporting quotes from the chunk for variables and relationships.
+4. Confidence values must be between 0 and 1.
+5. Identify what is missing by filling gaps:
+   - missing variable definitions
+   - unclear mechanisms
+   - untestable or ambiguous relationships
+   - missing boundary conditions
+6. Keep extraction_notes concise and useful for reviewers.
+"""
+
+
 def get_prompt_template(prompt_type: str = "base") -> str:
     """Get the appropriate prompt template based on type."""
     templates = {
@@ -185,3 +218,15 @@ def format_prompt(template: str, **kwargs) -> str:
     """Format a prompt template with the given parameters."""
     return template.format(**kwargs)
 
+
+def format_structured_extraction_prompt(
+    chunk_text: str,
+    survey_context: str,
+    literature_context: str,
+) -> str:
+    """Build user prompt for typed extraction."""
+    return EXTRACTION_USER_PROMPT.format(
+        chunk_text=chunk_text or "",
+        survey_context=survey_context or "No survey context available.",
+        literature_context=literature_context or "No literature context available.",
+    )
