@@ -10,6 +10,7 @@ import instructor
 import yaml
 from openai import OpenAI
 
+from llm_survey.agents import CrossChunkGapDetector
 from llm_survey.prompts.model_extraction_prompts import (
     EXTRACTION_SYSTEM_PROMPT,
     format_prompt,
@@ -78,6 +79,7 @@ class RAGModelExtractor:
 
         self.semantic_scholar = SemanticScholarClient()
         self.pubmed = PubMedClient()
+        self.gap_detector = CrossChunkGapDetector()
 
         self.processed_chunks: List[Dict[str, Any]] = []
         self.run_id: str = generate_run_id("pipeline")
@@ -298,6 +300,28 @@ class RAGModelExtractor:
             print(f"Run-scoped extraction results saved to {run_path}")
 
         return results
+
+    def detect_cross_chunk_gaps(
+        self,
+        extraction_results: List[Dict[str, Any]],
+        save_results: bool = True,
+    ) -> Dict[str, Any]:
+        """Detect cross-chunk gaps and score completeness/testability."""
+        report_model = self.gap_detector.detect(extraction_results)
+        report = report_model.model_dump()
+
+        if save_results:
+            latest_path = "outputs/cross_chunk_gap_report.json"
+            run_path = f"outputs/cross_chunk_gap_report_{self.run_id}.json"
+            os.makedirs("outputs", exist_ok=True)
+            with open(latest_path, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, ensure_ascii=False)
+            with open(run_path, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, ensure_ascii=False)
+            print(f"Cross-chunk gap report saved to {latest_path}")
+            print(f"Run-scoped gap report saved to {run_path}")
+
+        return report
 
     def _safe_completion_text(self, completion: Any) -> str:
         """Extract completion text defensively across provider edge cases."""

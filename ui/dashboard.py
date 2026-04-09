@@ -99,6 +99,8 @@ def main():
         st.session_state.extraction_results = None
     if 'topic_results' not in st.session_state:
         st.session_state.topic_results = None
+    if 'gap_report' not in st.session_state:
+        st.session_state.gap_report = None
     
     # Tab 1: Data Upload
     with tab1:
@@ -275,6 +277,10 @@ def main():
                             use_rag=use_rag,
                             save_results=True
                         )
+                        st.session_state.gap_report = st.session_state.extractor.detect_cross_chunk_gaps(
+                            st.session_state.extraction_results,
+                            save_results=True
+                        )
                         
                         st.success(f"Extracted models from {len(st.session_state.extraction_results)} chunks")
                         
@@ -286,6 +292,13 @@ def main():
                         col1.metric("Successful", len(successful_extractions))
                         col2.metric("Failed", len(failed_extractions))
                         col3.metric("Success Rate", f"{len(successful_extractions)/len(st.session_state.extraction_results)*100:.1f}%")
+                        if st.session_state.gap_report:
+                            st.caption(
+                                "Cross-chunk completeness: "
+                                f"{st.session_state.gap_report.get('overall_model_completeness', 0)*100:.1f}% | "
+                                "testability: "
+                                f"{st.session_state.gap_report.get('model_testability_score', 0)*100:.1f}%"
+                            )
                         
                     except Exception as e:
                         st.error(f"Error extracting models: {str(e)}")
@@ -406,6 +419,20 @@ def main():
                     output_format="yaml"
                 )
                 st.success(f"Topic analysis exported to {yaml_str}")
+
+        if st.session_state.gap_report:
+            st.subheader("Cross-Chunk Gap Detection")
+            report = st.session_state.gap_report
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Detected Gaps", len(report.get("gaps", [])))
+            c2.metric("Completeness", f"{report.get('overall_model_completeness', 0)*100:.1f}%")
+            c3.metric("Testability", f"{report.get('model_testability_score', 0)*100:.1f}%")
+
+            priority_gaps = report.get("priority_gaps", [])
+            if priority_gaps:
+                st.write("**Priority Gaps**")
+                for gap in priority_gaps:
+                    st.write(f"- {gap}")
 
 if __name__ == "__main__":
     main() 

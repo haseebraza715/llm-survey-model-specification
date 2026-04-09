@@ -48,6 +48,18 @@ def main() -> None:
     )
 
     t0 = time.time()
+    gap_report = extractor.detect_cross_chunk_gaps(extraction_results, save_results=True)
+    checkpoints.append(
+        {
+            "step": "gap_detection",
+            "seconds": round(time.time() - t0, 2),
+            "gaps": len(gap_report.get("gaps", [])),
+            "completeness": gap_report.get("overall_model_completeness", 0),
+            "testability": gap_report.get("model_testability_score", 0),
+        }
+    )
+
+    t0 = time.time()
     topic_analyzer = TopicAnalyzer(embedding_model=extractor.embedding_model_name, nr_topics=10, min_topic_size=2)
     texts = [c["text"] for c in chunks]
     topic_results = topic_analyzer.analyze_topics(texts, save_results=True)

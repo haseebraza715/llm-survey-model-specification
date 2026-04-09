@@ -86,11 +86,24 @@ def run_complete_pipeline(
     
     successful_extractions = [r for r in extraction_results if r['success']]
     print(f"Extracted models from {len(successful_extractions)}/{len(extraction_results)} chunks")
+
+    # Step 3: Cross-chunk gap detection
+    print("\nStep 3: Detecting cross-chunk gaps...")
+    gap_report = extractor.detect_cross_chunk_gaps(
+        extraction_results=extraction_results,
+        save_results=True,
+    )
+    print(
+        "Gap detection complete: "
+        f"{len(gap_report.get('gaps', []))} gaps, "
+        f"completeness={gap_report.get('overall_model_completeness', 0):.2f}, "
+        f"testability={gap_report.get('model_testability_score', 0):.2f}"
+    )
     
-    # Step 3: Topic analysis (optional)
+    # Step 4: Topic analysis (optional)
     topic_results = None
     if perform_topic_analysis:
-        print("\nStep 3: Performing topic analysis...")
+        print("\nStep 4: Performing topic analysis...")
         TopicAnalyzer = get_topic_analyzer()
         if TopicAnalyzer:
             topic_analyzer = TopicAnalyzer(
@@ -112,8 +125,8 @@ def run_complete_pipeline(
         else:
             print("Topic analysis skipped due to dependency issues")
     
-    # Step 4: Generate comprehensive report
-    print("\nStep 4: Generating comprehensive report...")
+    # Step 5: Generate comprehensive report
+    print("\nStep 5: Generating comprehensive report...")
     
     report = {
         'pipeline_info': {
@@ -129,6 +142,7 @@ def run_complete_pipeline(
             'success_rate': len(successful_extractions) / len(extraction_results) if extraction_results else 0,
             'models': successful_extractions
         },
+        'gap_detection': gap_report,
         'topic_analysis': topic_results if topic_results else None
     }
     
@@ -149,6 +163,8 @@ def run_complete_pipeline(
     print(f"Total chunks processed: {len(processed_chunks)}")
     print(f"Models extracted: {len(successful_extractions)}/{len(extraction_results)}")
     print(f"Success rate: {report['extraction_results']['success_rate']*100:.1f}%")
+    print(f"Model completeness: {gap_report.get('overall_model_completeness', 0)*100:.1f}%")
+    print(f"Model testability: {gap_report.get('model_testability_score', 0)*100:.1f}%")
     
     if topic_results:
         topic_info = topic_results['model_info']
