@@ -2,16 +2,22 @@
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.9+
 - `pip` available
 - OpenRouter API key
-- Hugging Face token with access to selected embedding model (if gated)
 
 Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
+
+## Supported Input Formats
+
+- `.csv` with `text` or `response` column (optional `speaker_id`, `timestamp`)
+- `.txt` (paragraphs or `---` separated blocks)
+- `.pdf`
+- `.docx`
 
 ## Environment Variables
 
@@ -25,7 +31,6 @@ Common optional values:
 - `OPENROUTER_MODEL=google/gemma-4-31b-it:free`
 - `OPENROUTER_HTTP_REFERER=<your-site-or-app-url>`
 - `OPENROUTER_X_TITLE=<your-app-name>`
-- `HF_TOKEN=<huggingface-token-with-model-access>`
 
 ## Primary Commands
 
@@ -39,6 +44,7 @@ Useful flags:
 
 ```bash
 python main.py --input <path> --no-rag
+python main.py --input <path> --no-literature
 python main.py --input <path> --no-topic-analysis
 python main.py --input <path> --llm-model google/gemma-4-31b-it
 python main.py --input <path> --base-url https://openrouter.ai/api/v1
@@ -71,7 +77,9 @@ python -m streamlit run ui/dashboard.py
 ## Expected Outputs
 
 - `data/processed/processed_chunks.json`
+- `data/processed/chunks_<run_id>.json`
 - `outputs/extracted_models.json`
+- `outputs/extracted_models_<run_id>.json`
 - `outputs/comprehensive_report.json`
 - `outputs/topic_analysis.json` (if topic analysis enabled)
 - `outputs/topic_summary.md` (if topic analysis enabled)
@@ -85,40 +93,39 @@ Symptoms:
 - resource not found errors during preprocessing
 
 Action:
-- rerun pipeline once; utility attempts lazy download
-- if still failing, run Python and manually download NLTK resources
+- rerun once; utility attempts lazy download
+- if still failing, manually download NLTK resources in a Python shell
 
-## 2) Hugging Face gated model errors (`401` / `403`)
-
-Symptoms:
-- embedding model download fails
-
-Action:
-- verify `HF_TOKEN` in `.env`
-- ensure token has read access
-- ensure account has accepted model access terms on Hugging Face model page
-
-## 3) OpenRouter completion edge cases (`choices` missing/empty)
+## 2) Literature retrieval failures (Semantic Scholar / PubMed)
 
 Symptoms:
-- extraction crashes or empty provider payloads
+- warnings during literature enrichment
 
 Action:
-- current extractor has defensive parsing + retry/backoff
-- check per-chunk result errors in `outputs/extracted_models.json`
+- confirm internet access
+- rerun with `--no-literature` if you need extraction-only behavior
+- inspect logs to identify which provider failed
 
-## 4) Long-running or stuck full run
+## 3) Structured extraction validation failures
 
 Symptoms:
-- run appears stalled on a chunk for a long time
+- `success=false` in extraction results with schema/validation errors
 
 Action:
-- inspect progress logs
+- inspect `error` and `raw_response` fields in `outputs/extracted_models.json`
+- reduce chunk size or simplify prompt/model settings
+
+## 4) Long-running full run
+
+Symptoms:
+- run appears slow or stalled
+
+Action:
 - rerun with smaller input for diagnosis
-- disable topic analysis or RAG temporarily to isolate bottleneck
+- disable topic analysis or literature retrieval temporarily
 
 ## Operational Tips
 
-- Keep first validation run small (subset input) after dependency/model changes.
-- Treat smoke run as integration check, not performance benchmark.
-- Commit generated artifacts (`outputs`, `data/chroma*`) only when you intentionally want reproducible run state in git.
+- Keep first validation runs small after dependency/model changes.
+- Treat smoke run as integration validation, not performance benchmarking.
+- Commit generated artifacts (`outputs`, `data/chroma*`) only when intentionally preserving run state.

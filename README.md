@@ -5,8 +5,9 @@
 This project turns qualitative survey or interview text into structured scientific-model candidates.
 
 Core capabilities:
-- semantic chunking and retrieval-ready embeddings
-- LLM-based structured extraction (validated schema output)
+- multi-format ingestion (`.csv`, `.txt`, `.pdf`, `.docx`) with cleaning, deduplication, and metadata enrichment
+- dual-RAG retrieval with persistent survey and literature stores
+- LLM-based structured extraction (typed schema via instructor + Pydantic)
 - topic modeling and keyword analysis for cross-response patterns
 
 Main entry points:
@@ -41,6 +42,12 @@ Run the full pipeline:
 
 ```bash
 python main.py --input data/raw/synthetic_workplace_survey.csv --api-key YOUR_OPENROUTER_KEY
+```
+
+Disable literature retrieval if you want a faster/offline-friendly run:
+
+```bash
+python main.py --input data/raw/synthetic_workplace_survey.csv --api-key YOUR_OPENROUTER_KEY --no-literature
 ```
 
 Run the smoke test:

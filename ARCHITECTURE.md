@@ -2,35 +2,41 @@
 
 ## System Summary
 
-The pipeline ingests raw qualitative text, transforms it into semantically meaningful chunks, indexes those chunks in a vector store, and uses an LLM to extract structured scientific-model elements. Topic analysis then summarizes thematic patterns across responses, and outputs are written for downstream reporting.
+The pipeline ingests qualitative data from multiple file formats, cleans and deduplicates responses, chunks them into sentence-aware units, and stores survey chunks in a persistent vector store. It then builds a second literature vector store (Semantic Scholar + PubMed abstracts) and performs typed model extraction per chunk using instructor-backed schema validation.
 
 Primary components:
-- [`main.py`](main.py): orchestration and run flow
-- [`src/llm_survey/rag_pipeline.py`](src/llm_survey/rag_pipeline.py): chunking, embeddings, retrieval, structured extraction
-- [`src/llm_survey/topic_analysis.py`](src/llm_survey/topic_analysis.py): BERTopic and keyword analysis
-- [`src/llm_survey/utils/preprocess.py`](src/llm_survey/utils/preprocess.py): cleaning and chunk preparation
-- [`ui/dashboard.py`](ui/dashboard.py): interactive UI
+- [`main.py`](main.py): CLI orchestration and reporting
+- [`src/llm_survey/utils/preprocess.py`](src/llm_survey/utils/preprocess.py): multi-format parsing, cleaning, deduplication, chunking, metadata
+- [`src/llm_survey/rag/survey_store.py`](src/llm_survey/rag/survey_store.py): persistent survey vector store with content-hash dedupe
+- [`src/llm_survey/rag/literature_store.py`](src/llm_survey/rag/literature_store.py): persistent literature vector store
+- [`src/llm_survey/rag/semantic_scholar.py`](src/llm_survey/rag/semantic_scholar.py): Semantic Scholar retrieval
+- [`src/llm_survey/rag/pubmed_client.py`](src/llm_survey/rag/pubmed_client.py): PubMed retrieval
+- [`src/llm_survey/rag_pipeline.py`](src/llm_survey/rag_pipeline.py): dual-context retrieval + structured extraction
+- [`src/llm_survey/schemas/extraction.py`](src/llm_survey/schemas/extraction.py): typed extraction schema
 
 ## Data Flow
 
 ```mermaid
 flowchart TD
-    A[Raw Input CSV/TXT] --> B[Preprocess and Clean]
-    B --> C[Semantic Chunking]
-    C --> D[Embeddings and Chroma Index]
-    D --> E[LLM Structured Extraction]
-    E --> F[Schema Validation]
-    F --> G[Extracted Models Output]
-    C --> H[Topic and Keyword Analysis]
-    H --> I[Topic Analysis Output]
-    G --> J[Comprehensive Report]
+    A[Raw Input CSV/TXT/PDF/DOCX] --> B[Clean and Deduplicate]
+    B --> C[Sentence-Aware Chunking + Metadata]
+    C --> D[Survey Store Chroma Persistent]
+    C --> E[Topic Queries from Chunk Corpus]
+    E --> F[Semantic Scholar + PubMed Retrieval]
+    F --> G[Literature Store Chroma Persistent]
+    D --> H[Survey Context Retrieval]
+    G --> I[Literature Context Retrieval]
+    H --> J[Instructor Typed Extraction]
     I --> J
+    J --> K[Per-Chunk Extraction Results]
+    K --> L[Comprehensive Report]
 ```
 
 ## Outputs
 
 - [`data/processed/processed_chunks.json`](data/processed/processed_chunks.json)
+- `data/processed/chunks_<run_id>.json` (run-scoped)
 - [`outputs/extracted_models.json`](outputs/extracted_models.json)
-- [`outputs/topic_analysis.json`](outputs/topic_analysis.json)
+- `outputs/extracted_models_<run_id>.json` (run-scoped)
 - [`outputs/comprehensive_report.json`](outputs/comprehensive_report.json)
-- [`outputs/plots/`](outputs/plots/) (visualizations)
+- [`outputs/topic_analysis.json`](outputs/topic_analysis.json) (when topic analysis is enabled)

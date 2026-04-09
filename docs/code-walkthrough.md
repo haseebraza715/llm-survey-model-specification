@@ -22,110 +22,113 @@ Key functions:
 - `create_sample_data()`
   - Generates local sample CSV for quick testing.
 - `main()`
-  - Argument parsing and command routing.
+  - Argument parsing and command routing (`--no-rag`, `--no-literature`, `--no-topic-analysis`, etc.).
 
-## `src/llm_survey/rag_pipeline.py`
+## `src/llm_survey/utils/preprocess.py`
 
-Implements structured extraction and vector-backed retrieval.
-
-Key classes:
-
-- `ScientificModel(BaseModel)`
-  - Output contract enforced after YAML parsing.
-  - Required fields: `Variables`, `Relationships`, `Hypotheses`, `Moderators`, `Themes`.
-- `RAGModelExtractor`
-  - Constructor:
-    - resolves API key
-    - initializes embedding model
-    - initializes OpenRouter client
-    - initializes persistent Chroma vector store
-
-Key methods:
-
-- `process_and_store_data(file_path, max_tokens, save_processed)`
-  - Reads raw chunks from preprocess utility
-  - Converts to `Document`s with metadata
-  - Runs semantic node splitting
-  - Persists index to Chroma
-  - Writes processed chunk JSON
-- `_extract_yaml_with_validation(prompt)`
-  - Calls chat completion
-  - Defensively reads completion payload
-  - Retries with backoff on empty/malformed payload
-  - Parses YAML and validates against `ScientificModel`
-  - Returns success/failure record including raw response and error
-- `_safe_completion_text(completion)`
-  - Guards against provider edge cases where `choices` or `message.content` can be missing/non-string.
-- `extract_model_from_chunk(chunk_text, use_rag, num_context_docs)`
-  - Retrieves nearest chunks from vector index when RAG is enabled
-  - Formats prompt and executes validated extraction
-- `extract_models_from_all_chunks(...)`
-  - Iterates all processed chunks
-  - Collects per-chunk results and saves output JSON
-- `_call_yaml(prompt)`
-  - Generic YAML call helper used by thematic/refinement methods
-- `perform_thematic_analysis(...)` and `refine_model(...)`
-  - Additional prompt-driven analysis helpers with JSON output files
-
-## `utils/preprocess.py`
-
-Support functions for ingestion and chunk preparation.
+Ingestion and preprocessing for Phase 1.
 
 Key functions:
 
-- `ensure_nltk_resources()`
-  - Verifies/downloads required tokenizer resources.
+- `load_file(file_path)`
+  - Dispatches parsing for `.csv`, `.txt`, `.pdf`, `.docx`.
+- `parse_csv / parse_txt / parse_pdf / parse_docx`
+  - Format-specific readers with normalized response records.
 - `clean_text(text)`
-  - Basic text cleanup.
-- `chunk_text(text, max_tokens, overlap)`
-  - Token-aware chunking utility.
+  - Unicode normalization, HTML stripping, control character cleanup.
+- `deduplicate_records(records)`
+  - Drops duplicate responses by cleaned content hash.
+- `chunk_text(text, max_tokens, overlap_sentences)`
+  - Sentence-aware chunking with overlap.
 - `extract_metadata(...)`
-  - Standardizes metadata fields.
-- `process_survey_data(file_path, max_tokens)`
-  - Main ingest routine for `CSV` and `TXT`.
-- `save_processed_data(chunks, output_path)`
-  - Writes processed chunks to disk.
+  - Adds word/sentence counts, sentiment, subjectivity, language detection.
+- `save_processed_data_for_run(...)`
+  - Writes run-scoped chunk file (`chunks_<run_id>.json`).
 
-## `src/llm_survey/topic_analysis.py`
+## `src/llm_survey/rag/`
 
-Implements topic model and keyword layer.
+Dual-RAG infrastructure for Phase 2.
 
-Key class:
+- `embedder.py`
+  - `CachedEmbedder` for embedding cache reuse and deterministic fallback embedding.
+- `survey_store.py`
+  - Persistent Chroma survey store with content-hash duplicate skipping and similarity query support.
+- `literature_store.py`
+  - Persistent Chroma literature store for paper abstracts and metadata.
+- `semantic_scholar.py`
+  - Semantic Scholar paper search client.
+- `pubmed_client.py`
+  - PubMed E-utilities client (search + summary + abstract fetch).
 
-- `TopicAnalyzer`
+## `src/llm_survey/schemas/extraction.py`
+
+Typed extraction schema for Phase 3:
+
+- `Variable`, `Relationship`, `Hypothesis`, `DetectedGap`
+- `ChunkExtractionResult` (top-level extraction payload)
+
+## `src/llm_survey/prompts/model_extraction_prompts.py`
+
+Prompt definitions and formatters.
+
+- `EXTRACTION_SYSTEM_PROMPT`
+  - Enforces schema-grounded JSON output expectations.
+- `format_structured_extraction_prompt(...)`
+  - Builds chunk + survey context + literature context prompt.
+
+## `src/llm_survey/rag_pipeline.py`
+
+Main runtime extraction pipeline.
+
+Key responsibilities:
+
+- Initializes OpenRouter client and instructor wrapper.
+- Builds/queries survey and literature vector stores.
+- Generates literature queries from survey chunk corpus.
+- Retrieves literature from Semantic Scholar + PubMed.
+- Executes typed extraction with `ChunkExtractionResult` schema.
+- Saves latest and run-scoped outputs.
 
 Key methods:
 
-- `fit_topic_model(texts, save_model)`
-  - Fits BERTopic and optionally saves model artifacts.
-- `extract_keywords(texts, top_k)`
-  - Uses KeyBERT with `top_n=top_k` (API-correct argument).
-- `analyze_topics(texts, save_results)`
-  - Executes full topic pipeline and saves structured results.
-- `create_topic_visualizations(results, save_plots)`
-  - Produces Plotly HTML charts.
-- `generate_topic_summary(results, save_summary)`
-  - Generates markdown summary.
-- `export_topic_data(results, output_format)`
-  - Exports normalized topic payload (`yaml` or `json`).
+- `process_and_store_data(...)`
+  - Runs ingestion, survey-store insertion, run-scoped chunk persistence, optional literature enrichment.
+- `_extract_topic_queries(...)`
+  - Generates keyword clusters for literature search.
+- `_populate_literature_store(...)`
+  - Retrieves and indexes paper abstracts.
+- `extract_model_from_chunk(...)`
+  - Retrieves survey/literature context and performs structured extraction.
+- `extract_models_from_all_chunks(...)`
+  - Iterates all chunks and writes extraction outputs.
+
+## `src/llm_survey/topic_analysis.py`
+
+Topic model and keyword layer (unchanged baseline).
+
+- BERTopic fitting
+- KeyBERT keyword extraction
+- Plot generation and summary export
 
 ## `scripts/smoke_e2e.py`
 
-Single-command integration smoke runner.
+Integration smoke runner.
 
-- Executes preprocessing, extraction, and topic analysis sequence
-- Used for full-path validation and runtime diagnostics
+- Executes preprocessing, extraction, and topic analysis
+- Uses `enable_literature_retrieval=False` to keep smoke runs deterministic/faster
 
 ## `ui/dashboard.py`
 
-Streamlit app entry:
+Streamlit app entry.
 
-- Reads configuration
-- Invokes pipeline operations
-- Displays results and status in UI form
+- Upload supports `csv/txt/pdf/docx`
+- Sidebar includes `Use Literature Retrieval`
+- Invokes updated `RAGModelExtractor` flow for extraction
 
-## Implementation Notes
+## `tests/`
 
-- The repository is functional but still heavy in a few larger files.
-- Next refactor should separate orchestration logic from model-specific logic into smaller package modules.
-- Keep extraction schema and prompt changes synchronized to avoid parse/validation mismatches.
+Phase-focused tests:
+
+- `test_preprocess_phase1.py`: ingestion/cleaning/dedup/run-scoped outputs
+- `test_rag_phase2.py`: caching + survey/literature store behavior
+- `test_extraction_phase3.py`: typed extraction path with mocked instructor client

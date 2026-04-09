@@ -2,99 +2,102 @@
 
 ## Purpose
 
-The system converts unstructured survey/interview text into:
+The system converts unstructured survey/interview text into structured scientific-model candidates by combining:
 
-- structured scientific-model candidates (variables, relationships, hypotheses, moderators, themes)
-- topic and keyword summaries for cross-response pattern analysis
+- enriched ingestion and preprocessing
+- dual-RAG retrieval (survey + literature)
+- typed LLM extraction with schema enforcement
 
 ## High-Level Pipeline
 
-1. Load and clean source data (`CSV` or `TXT`)
-2. Split long text into manageable chunks
-3. Build semantic nodes and embed them
-4. Persist vectors in ChromaDB
-5. Extract YAML model per chunk with optional retrieval context (RAG)
-6. Validate extraction output against a strict schema
-7. Run topic analysis (BERTopic + KeyBERT) on chunk texts
-8. Save machine-readable outputs and summaries
+1. Load and parse source data (`CSV`, `TXT`, `PDF`, `DOCX`)
+2. Clean text, normalize content, and deduplicate responses
+3. Apply sentence-aware chunking and metadata enrichment
+4. Persist survey chunks in Chroma (content-hash dedupe + embedding cache)
+5. Generate literature search queries from chunk corpus
+6. Retrieve papers from Semantic Scholar and PubMed
+7. Persist literature abstracts in Chroma
+8. Extract typed model per chunk with instructor + Pydantic schema
+9. Save run-scoped outputs and comprehensive report
 
 ## Core Components
 
 ### CLI Orchestrator: `main.py`
 
-Owns the run order and runtime options:
+Owns run order and runtime options:
 
-- processing and vector storage
+- processing/vector storage
 - extraction pass
 - optional topic analysis
-- comprehensive report generation
+- run report generation
 
 ### Extraction Engine: `src/llm_survey/rag_pipeline.py`
 
 Main class: `RAGModelExtractor`
 
-- Embedding model: Hugging Face embedding backend
-- Vector store: Chroma persistent collection
-- Chunking strategy: semantic splitter (`SemanticSplitterNodeParser`)
-- LLM calls: OpenRouter-compatible OpenAI client
-- Output contract: validated `ScientificModel` (Pydantic)
+- OpenRouter-compatible OpenAI client
+- instructor wrapper for typed extraction
+- survey/literature retrieval orchestration
+- run-scoped output persistence
 
-### Preprocessing Utilities: `utils/preprocess.py`
+### Preprocessing Utilities: `src/llm_survey/utils/preprocess.py`
 
 Handles:
 
-- text normalization
-- token-aware chunk splitting
-- metadata extraction
-- NLTK resource checks/download (`punkt`, `punkt_tab`)
+- multi-format parsing (`csv/txt/pdf/docx`)
+- text normalization + deduplication
+- sentence-aware chunking
+- metadata extraction (`sentiment`, `subjectivity`, `language`, counts)
+- run-id generation and run-scoped chunk serialization
+
+### RAG Layer: `src/llm_survey/rag/`
+
+- `embedder.py`: cached embeddings with deterministic fallback
+- `survey_store.py`: persistent survey vector store
+- `literature_store.py`: persistent literature vector store
+- `semantic_scholar.py`: Semantic Scholar search client
+- `pubmed_client.py`: PubMed search/fetch client
+
+### Extraction Schema: `src/llm_survey/schemas/extraction.py`
+
+Defines strict typed contracts for:
+
+- variables
+- relationships
+- hypotheses
+- moderators
+- detected gaps
 
 ### Topic Analysis Engine: `src/llm_survey/topic_analysis.py`
 
 Main class: `TopicAnalyzer`
 
-- BERTopic model fitting and topic extraction
+- BERTopic fitting and topic extraction
 - KeyBERT keyword extraction
-- visualization generation
-- summary/export helpers
-
-### Prompt Layer: `prompts/model_extraction_prompts.py`
-
-Defines prompt templates and formatting helpers used by extraction and thematic/refinement operations.
-
-### UI Layer: `ui/dashboard.py`
-
-Streamlit interface for interactive operation and result inspection.
+- visualizations and summaries
 
 ## Data and Persistence Layout
 
 - `data/raw/` input datasets
-- `data/processed/processed_chunks.json` normalized and split chunks
-- `data/chroma/` persistent Chroma vector DB
-- `outputs/extracted_models.json` extraction results per chunk
-- `outputs/topic_analysis.json` topic analysis payload
+- `data/processed/processed_chunks.json` latest normalized chunks
+- `data/processed/chunks_<run_id>.json` run-scoped normalized chunks
+- `data/chroma/survey/` survey vector DB
+- `data/chroma/literature/` literature vector DB
+- `outputs/extracted_models.json` latest extraction results
+- `outputs/extracted_models_<run_id>.json` run-scoped extraction results
 - `outputs/comprehensive_report.json` run-level summary
-- `outputs/plots/` generated HTML visualizations
+- `outputs/topic_analysis.json` topic payload
+- `outputs/plots/` generated visualizations
 
 ## Reliability Design
 
-Extraction reliability is improved through:
+Reliability is improved through:
 
-- defensive completion parsing for provider edge cases
-- retry + backoff on empty/malformed responses
-- strict schema validation before accepting output as success
+- duplicate-skipping by content hash before vector insertion
+- embedding cache reuse across runs
+- resilient external literature retrieval (provider-level failure tolerance)
+- typed extraction schema validation via instructor/Pydantic
 
-Current practical bottleneck:
+Current practical bottlenecks:
 
-- full end-to-end runs are time-heavy on CPU-only machines with semantic chunking + embedding + many LLM calls
-
-## Recommended Structural Improvements (Next)
-
-To improve modularity further, split into packages:
-
-- `pipeline/runner.py` for orchestration (`run_complete_pipeline`)
-- `pipeline/extraction/` for `RAGModelExtractor` and schema
-- `pipeline/topic/` for topic/keyword logic
-- `pipeline/io/` for persistence and report writers
-- `config/` for env + runtime configuration model
-
-This keeps each file focused and reduces cross-module coupling.
+- full runs remain compute/network heavy when topic modeling and literature retrieval are both enabled
