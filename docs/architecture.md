@@ -7,6 +7,7 @@ The system converts unstructured survey/interview text into structured scientifi
 - enriched ingestion and preprocessing
 - dual-RAG retrieval (survey + literature)
 - typed LLM extraction with schema enforcement
+- cross-chunk gap detection with completeness/testability scoring
 
 ## High-Level Pipeline
 
@@ -18,7 +19,8 @@ The system converts unstructured survey/interview text into structured scientifi
 6. Retrieve papers from Semantic Scholar and PubMed
 7. Persist literature abstracts in Chroma
 8. Extract typed model per chunk with instructor + Pydantic schema
-9. Save run-scoped outputs and comprehensive report
+9. Detect cross-chunk gaps and compute completeness/testability scores
+10. Save run-scoped outputs and comprehensive report
 
 ## Core Components
 
@@ -68,6 +70,18 @@ Defines strict typed contracts for:
 - moderators
 - detected gaps
 
+### Gap Detection Layer: `src/llm_survey/agents/gap_detection.py`
+
+Runs a deterministic second pass over all chunk models:
+
+- aggregates explicit/inferred gaps across chunks
+- computes `overall_model_completeness` and `model_testability_score`
+- generates prioritized follow-up gaps
+
+### Gap Schema: `src/llm_survey/schemas/gap.py`
+
+Defines typed cross-chunk gap report contracts.
+
 ### Topic Analysis Engine: `src/llm_survey/topic_analysis.py`
 
 Main class: `TopicAnalyzer`
@@ -85,6 +99,8 @@ Main class: `TopicAnalyzer`
 - `data/chroma/literature/` literature vector DB
 - `outputs/extracted_models.json` latest extraction results
 - `outputs/extracted_models_<run_id>.json` run-scoped extraction results
+- `outputs/cross_chunk_gap_report.json` latest phase-4 report
+- `outputs/cross_chunk_gap_report_<run_id>.json` run-scoped phase-4 report
 - `outputs/comprehensive_report.json` run-level summary
 - `outputs/topic_analysis.json` topic payload
 - `outputs/plots/` generated visualizations
@@ -97,6 +113,7 @@ Reliability is improved through:
 - embedding cache reuse across runs
 - resilient external literature retrieval (provider-level failure tolerance)
 - typed extraction schema validation via instructor/Pydantic
+- explicit cross-chunk gap aggregation with deterministic scoring
 
 Current practical bottlenecks:
 

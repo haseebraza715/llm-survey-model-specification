@@ -80,6 +80,8 @@ python -m streamlit run ui/dashboard.py
 - `data/processed/chunks_<run_id>.json`
 - `outputs/extracted_models.json`
 - `outputs/extracted_models_<run_id>.json`
+- `outputs/cross_chunk_gap_report.json`
+- `outputs/cross_chunk_gap_report_<run_id>.json`
 - `outputs/comprehensive_report.json`
 - `outputs/topic_analysis.json` (if topic analysis enabled)
 - `outputs/topic_summary.md` (if topic analysis enabled)
@@ -115,7 +117,17 @@ Action:
 - inspect `error` and `raw_response` fields in `outputs/extracted_models.json`
 - reduce chunk size or simplify prompt/model settings
 
-## 4) Long-running full run
+## 4) Cross-chunk gap report looks unexpectedly empty
+
+Symptoms:
+- `outputs/cross_chunk_gap_report.json` has no gaps despite weak extraction quality
+
+Action:
+- verify extraction success rate and schema quality first
+- inspect per-chunk `model.gaps` fields in `outputs/extracted_models.json`
+- rerun with `--no-topic-analysis` to isolate extraction/gap pipeline behavior
+
+## 5) Long-running full run
 
 Symptoms:
 - run appears slow or stalled

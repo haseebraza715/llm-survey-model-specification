@@ -15,8 +15,9 @@ Key functions:
     1. initialize `RAGModelExtractor`
     2. process/store chunks
     3. extract models
-    4. optional topic analysis
-    5. write `outputs/comprehensive_report.json`
+    4. detect cross-chunk gaps + score completeness/testability
+    5. optional topic analysis
+    6. write `outputs/comprehensive_report.json`
 - `run_interactive_mode()`
   - CLI prompt flow for manual execution.
 - `create_sample_data()`
@@ -67,6 +68,13 @@ Typed extraction schema for Phase 3:
 - `Variable`, `Relationship`, `Hypothesis`, `DetectedGap`
 - `ChunkExtractionResult` (top-level extraction payload)
 
+## `src/llm_survey/schemas/gap.py`
+
+Typed phase-4 schema:
+
+- `CrossChunkGap`
+- `CrossChunkGapReport`
+
 ## `src/llm_survey/prompts/model_extraction_prompts.py`
 
 Prompt definitions and formatters.
@@ -87,6 +95,7 @@ Key responsibilities:
 - Generates literature queries from survey chunk corpus.
 - Retrieves literature from Semantic Scholar + PubMed.
 - Executes typed extraction with `ChunkExtractionResult` schema.
+- Runs cross-chunk gap detection and computes completeness/testability scores.
 - Saves latest and run-scoped outputs.
 
 Key methods:
@@ -101,6 +110,20 @@ Key methods:
   - Retrieves survey/literature context and performs structured extraction.
 - `extract_models_from_all_chunks(...)`
   - Iterates all chunks and writes extraction outputs.
+- `detect_cross_chunk_gaps(...)`
+  - Aggregates per-chunk signals into a structured cross-chunk gap report.
+  - Writes `outputs/cross_chunk_gap_report*.json`.
+
+## `src/llm_survey/agents/gap_detection.py`
+
+Phase-4 cross-chunk detector.
+
+- Merges explicit chunk-level gaps with inferred structural gaps.
+- Produces normalized `gap_type`, `frequency`, `affected_hypotheses`, and follow-up questions.
+- Computes:
+  - `overall_model_completeness`
+  - `model_testability_score`
+  - top `priority_gaps`
 
 ## `src/llm_survey/topic_analysis.py`
 
@@ -132,3 +155,4 @@ Phase-focused tests:
 - `test_preprocess_phase1.py`: ingestion/cleaning/dedup/run-scoped outputs
 - `test_rag_phase2.py`: caching + survey/literature store behavior
 - `test_extraction_phase3.py`: typed extraction path with mocked instructor client
+- `test_gap_detection_phase4.py`: cross-chunk gap aggregation, scoring, and output persistence

@@ -8,6 +8,7 @@ Core capabilities:
 - multi-format ingestion (`.csv`, `.txt`, `.pdf`, `.docx`) with cleaning, deduplication, and metadata enrichment
 - dual-RAG retrieval with persistent survey and literature stores
 - LLM-based structured extraction (typed schema via instructor + Pydantic)
+- cross-chunk gap detection with completeness and testability scoring
 - topic modeling and keyword analysis for cross-response patterns
 
 Main entry points:
