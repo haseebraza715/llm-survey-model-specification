@@ -7,6 +7,10 @@ This folder contains the complete technical documentation for the repository.
 - Read `architecture.md` for a high-level system view.
 - Read `runbook.md` for installation, environment variables, commands, and expected outputs.
 - Read `code-walkthrough.md` for module and function-level implementation details.
+- Read `agentic-research-assistant-full-implementation-plan.md` for the saved target implementation plan.
+- Read `agentic-research-assistant-phase-status.md` for current completion status by phase.
+- Read `agentic_research_assistant_plan.md` for the original full source plan document.
+- Open `agentic_research_assistant_architecture.svg` for the architecture diagram.
 - Read `documentation-best-practices.md` for standards to keep docs clear and maintainable.
 
 ## Document Map
@@ -35,6 +39,31 @@ Explains:
 - Required and optional environment variables
 - Output files produced by the pipeline
 - Common errors and how to fix them quickly
+
+### `agentic-research-assistant-full-implementation-plan.md`
+
+Explains:
+- Saved version of the full target architecture and phased plan
+- Intended pipeline loop, stack, outputs, orchestration, caching, and roadmap
+
+### `agentic-research-assistant-phase-status.md`
+
+Explains:
+- Current implementation status for each planned phase
+- Which parts are done, in progress, or not started
+- High-level completion estimate and code evidence pointers
+
+### `agentic_research_assistant_plan.md`
+
+Explains:
+- Original long-form implementation plan as provided
+- Full detailed phase requirements, schemas, and roadmap
+
+### `agentic_research_assistant_architecture.svg`
+
+Explains:
+- Visual architecture flow (`INGEST -> EXTRACT -> REFINE -> VALIDATE -> OUTPUT`)
+- Agent interactions and feedback loops
 
 ### `documentation-best-practices.md`
 
