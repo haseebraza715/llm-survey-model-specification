@@ -10,13 +10,13 @@ Core capabilities:
 - topic modeling and keyword analysis for cross-response patterns
 
 Main entry points:
-- CLI: `main.py`
-- Smoke test: `scripts/smoke_e2e.py`
-- Dashboard: `ui/dashboard.py`
+- CLI: [`main.py`](main.py)
+- Smoke test: [`scripts/smoke_e2e.py`](scripts/smoke_e2e.py)
+- Dashboard: [`ui/dashboard.py`](ui/dashboard.py)
 
 Additional documentation:
-- Architecture: `ARCHITECTURE.md`
-- Docs index: `docs/README.md`
+- Architecture: [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- Docs index: [`docs/README.md`](docs/README.md)
 
 ## Setup
 
@@ -26,7 +26,7 @@ Additional documentation:
 pip install -r requirements.txt
 ```
 
-2. Configure environment variables (copy from `.env.example`):
+2. Configure environment variables (copy from [`.env.example`](.env.example)):
 
 - `OPENROUTER_API_KEY` (required)
 - `OPENROUTER_BASE_URL` (optional, default: `https://openrouter.ai/api/v1`)
