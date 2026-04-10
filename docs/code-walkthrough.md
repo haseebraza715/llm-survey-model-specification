@@ -16,8 +16,9 @@ Key functions:
     2. process/store chunks
     3. extract models
     4. detect cross-chunk gaps + score completeness/testability
-    5. optional topic analysis
-    6. write `outputs/comprehensive_report.json`
+    5. build clarification plan
+    6. optional topic analysis
+    7. write `outputs/comprehensive_report.json`
 - `run_interactive_mode()`
   - CLI prompt flow for manual execution.
 - `create_sample_data()`
@@ -75,6 +76,14 @@ Typed phase-4 schema:
 - `CrossChunkGap`
 - `CrossChunkGapReport`
 
+## `src/llm_survey/schemas/clarification.py`
+
+Typed phase-5 schema:
+
+- `ClarificationQuestion`
+- `ClarificationPlan`
+- `ClarificationAnswer`
+
 ## `src/llm_survey/prompts/model_extraction_prompts.py`
 
 Prompt definitions and formatters.
@@ -113,6 +122,10 @@ Key methods:
 - `detect_cross_chunk_gaps(...)`
   - Aggregates per-chunk signals into a structured cross-chunk gap report.
   - Writes `outputs/cross_chunk_gap_report*.json`.
+- `generate_clarification_plan(...)`
+  - Converts cross-chunk gaps into actionable follow-up questions.
+  - Routes questions to `researcher`, `literature`, or `either`.
+  - Writes `outputs/clarification_plan*.json`.
 
 ## `src/llm_survey/agents/gap_detection.py`
 
@@ -124,6 +137,17 @@ Phase-4 cross-chunk detector.
   - `overall_model_completeness`
   - `model_testability_score`
   - top `priority_gaps`
+
+## `src/llm_survey/agents/clarification.py`
+
+Phase-5 clarification planner.
+
+- Transforms gap report entries into structured follow-up questions.
+- Assigns answer source (`researcher` / `literature` / `either`).
+- Generates literature auto-answers when evidence is retrievable.
+- Computes:
+  - `estimated_new_data_needed`
+  - `can_proceed_with_literature`
 
 ## `src/llm_survey/topic_analysis.py`
 
@@ -156,3 +180,4 @@ Phase-focused tests:
 - `test_rag_phase2.py`: caching + survey/literature store behavior
 - `test_extraction_phase3.py`: typed extraction path with mocked instructor client
 - `test_gap_detection_phase4.py`: cross-chunk gap aggregation, scoring, and output persistence
+- `test_clarification_phase5.py`: clarification routing, auto-answer synthesis, and plan output persistence

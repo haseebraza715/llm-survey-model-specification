@@ -2,7 +2,7 @@
 
 ## System Summary
 
-The pipeline ingests qualitative data from multiple file formats, cleans and deduplicates responses, chunks them into sentence-aware units, and stores survey chunks in a persistent vector store. It then builds a second literature vector store (Semantic Scholar + PubMed abstracts), performs typed model extraction per chunk using instructor-backed schema validation, and runs a cross-chunk gap detection pass with completeness/testability scoring.
+The pipeline ingests qualitative data from multiple file formats, cleans and deduplicates responses, chunks them into sentence-aware units, and stores survey chunks in a persistent vector store. It then builds a second literature vector store (Semantic Scholar + PubMed abstracts), performs typed model extraction per chunk using instructor-backed schema validation, runs a cross-chunk gap detection pass with completeness/testability scoring, and generates a clarification plan with source routing and optional literature auto-answers.
 
 Primary components:
 - [`main.py`](main.py): CLI orchestration and reporting
@@ -15,6 +15,8 @@ Primary components:
 - [`src/llm_survey/schemas/extraction.py`](src/llm_survey/schemas/extraction.py): typed extraction schema
 - [`src/llm_survey/agents/gap_detection.py`](src/llm_survey/agents/gap_detection.py): cross-chunk gap detection and scoring
 - [`src/llm_survey/schemas/gap.py`](src/llm_survey/schemas/gap.py): gap report schema
+- [`src/llm_survey/agents/clarification.py`](src/llm_survey/agents/clarification.py): clarification question planning + literature auto-answering
+- [`src/llm_survey/schemas/clarification.py`](src/llm_survey/schemas/clarification.py): clarification plan schema
 
 ## Data Flow
 
@@ -32,7 +34,8 @@ flowchart TD
     I --> J
     J --> K[Per-Chunk Extraction Results]
     K --> L[Cross-Chunk Gap Detection]
-    L --> M[Comprehensive Report]
+    L --> M[Clarification Planning]
+    M --> N[Comprehensive Report]
 ```
 
 ## Outputs
@@ -43,5 +46,7 @@ flowchart TD
 - `outputs/extracted_models_<run_id>.json` (run-scoped)
 - `outputs/cross_chunk_gap_report.json`
 - `outputs/cross_chunk_gap_report_<run_id>.json`
+- `outputs/clarification_plan.json`
+- `outputs/clarification_plan_<run_id>.json`
 - [`outputs/comprehensive_report.json`](outputs/comprehensive_report.json)
 - [`outputs/topic_analysis.json`](outputs/topic_analysis.json) (when topic analysis is enabled)

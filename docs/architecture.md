@@ -8,6 +8,7 @@ The system converts unstructured survey/interview text into structured scientifi
 - dual-RAG retrieval (survey + literature)
 - typed LLM extraction with schema enforcement
 - cross-chunk gap detection with completeness/testability scoring
+- clarification planning with source routing and optional literature auto-answers
 
 ## High-Level Pipeline
 
@@ -20,7 +21,8 @@ The system converts unstructured survey/interview text into structured scientifi
 7. Persist literature abstracts in Chroma
 8. Extract typed model per chunk with instructor + Pydantic schema
 9. Detect cross-chunk gaps and compute completeness/testability scores
-10. Save run-scoped outputs and comprehensive report
+10. Build clarification plan from prioritized gaps
+11. Save run-scoped outputs and comprehensive report
 
 ## Core Components
 
@@ -82,6 +84,18 @@ Runs a deterministic second pass over all chunk models:
 
 Defines typed cross-chunk gap report contracts.
 
+### Clarification Agent: `src/llm_survey/agents/clarification.py`
+
+Converts phase-4 gaps into actionable follow-up questions:
+
+- question prioritization (`high`, `medium`, `low`)
+- answer-source routing (`researcher`, `literature`, `either`)
+- optional literature auto-answer synthesis
+
+### Clarification Schema: `src/llm_survey/schemas/clarification.py`
+
+Defines typed clarification question/plan/answer contracts.
+
 ### Topic Analysis Engine: `src/llm_survey/topic_analysis.py`
 
 Main class: `TopicAnalyzer`
@@ -101,6 +115,8 @@ Main class: `TopicAnalyzer`
 - `outputs/extracted_models_<run_id>.json` run-scoped extraction results
 - `outputs/cross_chunk_gap_report.json` latest phase-4 report
 - `outputs/cross_chunk_gap_report_<run_id>.json` run-scoped phase-4 report
+- `outputs/clarification_plan.json` latest phase-5 plan
+- `outputs/clarification_plan_<run_id>.json` run-scoped phase-5 plan
 - `outputs/comprehensive_report.json` run-level summary
 - `outputs/topic_analysis.json` topic payload
 - `outputs/plots/` generated visualizations
@@ -114,6 +130,7 @@ Reliability is improved through:
 - resilient external literature retrieval (provider-level failure tolerance)
 - typed extraction schema validation via instructor/Pydantic
 - explicit cross-chunk gap aggregation with deterministic scoring
+- deterministic clarification routing + literature-backed auto-answering
 
 Current practical bottlenecks:
 

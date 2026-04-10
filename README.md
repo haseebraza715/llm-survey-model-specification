@@ -9,6 +9,7 @@ Core capabilities:
 - dual-RAG retrieval with persistent survey and literature stores
 - LLM-based structured extraction (typed schema via instructor + Pydantic)
 - cross-chunk gap detection with completeness and testability scoring
+- clarification planning with question routing (`researcher`/`literature`/`either`) and literature auto-answers
 - topic modeling and keyword analysis for cross-response patterns
 
 Main entry points:

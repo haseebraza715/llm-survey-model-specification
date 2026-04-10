@@ -82,6 +82,8 @@ python -m streamlit run ui/dashboard.py
 - `outputs/extracted_models_<run_id>.json`
 - `outputs/cross_chunk_gap_report.json`
 - `outputs/cross_chunk_gap_report_<run_id>.json`
+- `outputs/clarification_plan.json`
+- `outputs/clarification_plan_<run_id>.json`
 - `outputs/comprehensive_report.json`
 - `outputs/topic_analysis.json` (if topic analysis enabled)
 - `outputs/topic_summary.md` (if topic analysis enabled)
@@ -127,7 +129,17 @@ Action:
 - inspect per-chunk `model.gaps` fields in `outputs/extracted_models.json`
 - rerun with `--no-topic-analysis` to isolate extraction/gap pipeline behavior
 
-## 5) Long-running full run
+## 5) Clarification plan has too many researcher-only questions
+
+Symptoms:
+- many questions route to `researcher`, reducing auto-proceed capability
+
+Action:
+- inspect `outputs/clarification_plan.json` and check which gap types dominate
+- verify literature retrieval populated `data/chroma/literature/`
+- improve retrieval quality (input quality, model choice, or rerun without `--no-literature`)
+
+## 6) Long-running full run
 
 Symptoms:
 - run appears slow or stalled
