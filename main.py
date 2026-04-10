@@ -40,6 +40,9 @@ def run_complete_pipeline(
     base_url: str = "https://openrouter.ai/api/v1",
     extra_headers: Dict[str, str] | None = None,
     enable_literature_retrieval: bool = True,
+    enable_refinement_loop: bool = True,
+    max_refinement_iterations: int = 3,
+    completeness_threshold: float = 0.75,
 ) -> Dict[str, Any]:
     """
     Run the complete pipeline from data processing to model extraction.
@@ -111,11 +114,38 @@ def run_complete_pipeline(
         f"{len(clarification_plan.get('questions', []))} questions, "
         f"auto_answers={len(clarification_plan.get('auto_answers', []))}"
     )
-    
-    # Step 5: Topic analysis (optional)
+
+    # Step 5: Refinement loop (optional)
+    refinement_loop = None
+    if enable_refinement_loop:
+        print("\nStep 5: Running refinement loop...")
+        refinement_loop = extractor.run_refinement_loop(
+            extraction_results=extraction_results,
+            gap_report=gap_report,
+            clarification_plan=clarification_plan,
+            use_rag=use_rag,
+            max_iterations=max_refinement_iterations,
+            completeness_threshold=completeness_threshold,
+            save_results=True,
+        )
+        extraction_results = refinement_loop["final_extraction_results"]
+        gap_report = refinement_loop["final_gap_report"]
+        clarification_plan = refinement_loop["final_clarification_plan"]
+        successful_extractions = [r for r in extraction_results if r['success']]
+        loop_report = refinement_loop["report"]
+        print(
+            "Refinement loop complete: "
+            f"iterations={loop_report.get('iterations_completed', 0)}, "
+            f"stop_reason={loop_report.get('stop_reason', 'unknown')}, "
+            f"final_completeness={loop_report.get('final_completeness', 0):.2f}"
+        )
+    else:
+        print("\nStep 5: Refinement loop skipped.")
+
+    # Step 6: Topic analysis (optional)
     topic_results = None
     if perform_topic_analysis:
-        print("\nStep 5: Performing topic analysis...")
+        print("\nStep 6: Performing topic analysis...")
         TopicAnalyzer = get_topic_analyzer()
         if TopicAnalyzer:
             topic_analyzer = TopicAnalyzer(
@@ -137,8 +167,8 @@ def run_complete_pipeline(
         else:
             print("Topic analysis skipped due to dependency issues")
     
-    # Step 6: Generate comprehensive report
-    print("\nStep 6: Generating comprehensive report...")
+    # Step 7: Generate comprehensive report
+    print("\nStep 7: Generating comprehensive report...")
     
     report = {
         'pipeline_info': {
@@ -146,6 +176,9 @@ def run_complete_pipeline(
             'use_rag': use_rag,
             'perform_topic_analysis': perform_topic_analysis,
             'enable_literature_retrieval': enable_literature_retrieval,
+            'enable_refinement_loop': enable_refinement_loop,
+            'max_refinement_iterations': max_refinement_iterations,
+            'completeness_threshold': completeness_threshold,
             'total_chunks': len(processed_chunks)
         },
         'extraction_results': {
@@ -156,6 +189,7 @@ def run_complete_pipeline(
         },
         'gap_detection': gap_report,
         'clarification_plan': clarification_plan,
+        'refinement_loop': refinement_loop["report"] if refinement_loop else None,
         'topic_analysis': topic_results if topic_results else None
     }
     
@@ -179,6 +213,11 @@ def run_complete_pipeline(
     print(f"Model completeness: {gap_report.get('overall_model_completeness', 0)*100:.1f}%")
     print(f"Model testability: {gap_report.get('model_testability_score', 0)*100:.1f}%")
     print(f"Clarification questions: {len(clarification_plan.get('questions', []))}")
+    if refinement_loop:
+        print(
+            f"Refinement iterations: {refinement_loop['report'].get('iterations_completed', 0)} "
+            f"(stop: {refinement_loop['report'].get('stop_reason', 'unknown')})"
+        )
     
     if topic_results:
         topic_info = topic_results['model_info']
@@ -211,7 +250,18 @@ def run_interactive_mode():
     # Get options
     use_rag = input("Use RAG enhancement? (y/n, default: y): ").strip().lower() != 'n'
     use_literature = input("Enable literature retrieval? (y/n, default: y): ").strip().lower() != 'n'
+    use_refinement = input("Enable refinement loop? (y/n, default: y): ").strip().lower() != 'n'
+    max_iterations_raw = input("Max refinement iterations (default: 3): ").strip()
+    threshold_raw = input("Completeness threshold 0-1 (default: 0.75): ").strip()
     perform_topic_analysis = input("Perform topic analysis? (y/n, default: y): ").strip().lower() != 'n'
+    try:
+        max_iterations = int(max_iterations_raw) if max_iterations_raw else 3
+    except ValueError:
+        max_iterations = 3
+    try:
+        threshold = float(threshold_raw) if threshold_raw else 0.75
+    except ValueError:
+        threshold = 0.75
     
     # Run pipeline
     try:
@@ -221,6 +271,9 @@ def run_interactive_mode():
             use_rag=use_rag,
             perform_topic_analysis=perform_topic_analysis,
             enable_literature_retrieval=use_literature,
+            enable_refinement_loop=use_refinement,
+            max_refinement_iterations=max_iterations,
+            completeness_threshold=threshold,
         )
         print("\nPipeline completed successfully!")
         
@@ -276,6 +329,9 @@ def main():
     parser.add_argument("--llm-model", default="google/gemma-4-31b-it", help="OpenRouter model name")
     parser.add_argument("--base-url", default="https://openrouter.ai/api/v1", help="OpenRouter-compatible base URL")
     parser.add_argument("--no-literature", action="store_true", help="Disable literature retrieval/enrichment")
+    parser.add_argument("--no-refinement", action="store_true", help="Disable iterative refinement loop")
+    parser.add_argument("--max-refinement-iterations", type=int, default=3, help="Maximum refinement iterations")
+    parser.add_argument("--completeness-threshold", type=float, default=0.75, help="Stop loop when completeness reaches this threshold")
     parser.add_argument("--http-referer", default="", help="Optional HTTP Referer header for OpenRouter")
     parser.add_argument("--x-title", default="", help="Optional X-Title header for OpenRouter")
     
@@ -315,6 +371,9 @@ def main():
             base_url=args.base_url,
             extra_headers=extra_headers,
             enable_literature_retrieval=not args.no_literature,
+            enable_refinement_loop=not args.no_refinement,
+            max_refinement_iterations=args.max_refinement_iterations,
+            completeness_threshold=args.completeness_threshold,
         )
         print("\nPipeline completed successfully!")
         

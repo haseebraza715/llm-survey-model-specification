@@ -85,6 +85,12 @@ class RAGModelExtractor:
         self.processed_chunks: List[Dict[str, Any]] = []
         self.run_id: str = generate_run_id("pipeline")
 
+    @staticmethod
+    def _write_json(path: str, payload: Any) -> None:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+
     def process_and_store_data(
         self,
         file_path: str,
@@ -220,6 +226,7 @@ class RAGModelExtractor:
         use_rag: bool = True,
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
+        enriched_context: str = "",
     ) -> Dict[str, Any]:
         """Extract one structured model from a chunk using survey + literature context."""
         survey_context = ""
@@ -228,6 +235,13 @@ class RAGModelExtractor:
         if use_rag:
             survey_context = self.survey_store.format_context(text=chunk_text, k=num_context_docs)
             literature_context = self.literature_store.format_context(text=chunk_text, k=num_literature_docs)
+
+        if enriched_context.strip():
+            literature_context = (
+                f"{literature_context}\n\nRefinement Context:\n{enriched_context}".strip()
+                if literature_context.strip()
+                else f"Refinement Context:\n{enriched_context}".strip()
+            )
 
         prompt = format_structured_extraction_prompt(
             chunk_text=chunk_text,
@@ -269,6 +283,8 @@ class RAGModelExtractor:
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
         save_results: bool = True,
+        enriched_context: str = "",
+        output_suffix: str = "",
     ) -> List[Dict[str, Any]]:
         """Extract structured models from all available chunks."""
         if not self.processed_chunks:
@@ -283,6 +299,7 @@ class RAGModelExtractor:
                 use_rag=use_rag,
                 num_context_docs=num_context_docs,
                 num_literature_docs=num_literature_docs,
+                enriched_context=enriched_context,
             )
             result["chunk_id"] = chunk["id"]
             result["chunk_metadata"] = chunk["metadata"]
@@ -290,13 +307,11 @@ class RAGModelExtractor:
             results.append(result)
 
         if save_results:
-            latest_path = "outputs/extracted_models.json"
-            run_path = f"outputs/extracted_models_{self.run_id}.json"
-            os.makedirs("outputs", exist_ok=True)
-            with open(latest_path, "w", encoding="utf-8") as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
-            with open(run_path, "w", encoding="utf-8") as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
+            suffix = f"_{output_suffix}" if output_suffix else ""
+            latest_path = f"outputs/extracted_models{suffix}.json"
+            run_path = f"outputs/extracted_models_{self.run_id}{suffix}.json"
+            self._write_json(latest_path, results)
+            self._write_json(run_path, results)
             print(f"Results saved to {latest_path}")
             print(f"Run-scoped extraction results saved to {run_path}")
 
@@ -306,19 +321,18 @@ class RAGModelExtractor:
         self,
         extraction_results: List[Dict[str, Any]],
         save_results: bool = True,
+        output_suffix: str = "",
     ) -> Dict[str, Any]:
         """Detect cross-chunk gaps and score completeness/testability."""
         report_model = self.gap_detector.detect(extraction_results)
         report = report_model.model_dump()
 
         if save_results:
-            latest_path = "outputs/cross_chunk_gap_report.json"
-            run_path = f"outputs/cross_chunk_gap_report_{self.run_id}.json"
-            os.makedirs("outputs", exist_ok=True)
-            with open(latest_path, "w", encoding="utf-8") as f:
-                json.dump(report, f, indent=2, ensure_ascii=False)
-            with open(run_path, "w", encoding="utf-8") as f:
-                json.dump(report, f, indent=2, ensure_ascii=False)
+            suffix = f"_{output_suffix}" if output_suffix else ""
+            latest_path = f"outputs/cross_chunk_gap_report{suffix}.json"
+            run_path = f"outputs/cross_chunk_gap_report_{self.run_id}{suffix}.json"
+            self._write_json(latest_path, report)
+            self._write_json(run_path, report)
             print(f"Cross-chunk gap report saved to {latest_path}")
             print(f"Run-scoped gap report saved to {run_path}")
 
@@ -329,6 +343,7 @@ class RAGModelExtractor:
         gap_report: Dict[str, Any],
         save_results: bool = True,
         auto_answer_top_k: int = 3,
+        output_suffix: str = "",
     ) -> Dict[str, Any]:
         """Convert gap report into actionable clarification questions."""
         plan_model = self.clarification_agent.build_plan(
@@ -339,17 +354,160 @@ class RAGModelExtractor:
         plan = plan_model.model_dump()
 
         if save_results:
-            latest_path = "outputs/clarification_plan.json"
-            run_path = f"outputs/clarification_plan_{self.run_id}.json"
-            os.makedirs("outputs", exist_ok=True)
-            with open(latest_path, "w", encoding="utf-8") as f:
-                json.dump(plan, f, indent=2, ensure_ascii=False)
-            with open(run_path, "w", encoding="utf-8") as f:
-                json.dump(plan, f, indent=2, ensure_ascii=False)
+            suffix = f"_{output_suffix}" if output_suffix else ""
+            latest_path = f"outputs/clarification_plan{suffix}.json"
+            run_path = f"outputs/clarification_plan_{self.run_id}{suffix}.json"
+            self._write_json(latest_path, plan)
+            self._write_json(run_path, plan)
             print(f"Clarification plan saved to {latest_path}")
             print(f"Run-scoped clarification plan saved to {run_path}")
 
         return plan
+
+    def _build_enriched_context(self, clarification_plan: Dict[str, Any], gap_report: Dict[str, Any]) -> str:
+        """Build enriched context for refinement iterations."""
+        priority_gaps = clarification_plan.get("questions", [])[:5]
+        auto_answers = clarification_plan.get("auto_answers", [])
+        top_gap_descriptions = gap_report.get("priority_gaps", [])[:3]
+
+        segments: List[str] = []
+        if top_gap_descriptions:
+            segments.append("Priority unresolved gaps:\n- " + "\n- ".join(top_gap_descriptions))
+
+        if priority_gaps:
+            q_lines = []
+            for q in priority_gaps:
+                q_lines.append(f"{q.get('question_id', 'Q?')}: {q.get('question_text', '').strip()}")
+            if q_lines:
+                segments.append("Clarification questions:\n- " + "\n- ".join(q_lines))
+
+        if auto_answers:
+            a_lines = []
+            for a in auto_answers[:8]:
+                answer_text = str(a.get("answer_text", "")).strip()
+                if not answer_text:
+                    continue
+                a_lines.append(f"{a.get('question_id', 'Q?')}: {answer_text}")
+            if a_lines:
+                segments.append("Literature-backed clarification answers:\n- " + "\n- ".join(a_lines))
+
+        return "\n\n".join(seg for seg in segments if seg.strip())
+
+    def run_refinement_loop(
+        self,
+        extraction_results: List[Dict[str, Any]],
+        gap_report: Dict[str, Any],
+        clarification_plan: Dict[str, Any],
+        use_rag: bool = True,
+        num_context_docs: int = 3,
+        num_literature_docs: int = 3,
+        max_iterations: int = 3,
+        completeness_threshold: float = 0.75,
+        save_results: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Iteratively re-extract with enriched clarification context until completeness threshold or max iterations.
+        """
+        max_iterations = max(0, max_iterations)
+        completeness_threshold = max(0.0, min(1.0, completeness_threshold))
+
+        current_results = extraction_results
+        current_gap_report = gap_report
+        current_clarification_plan = clarification_plan
+
+        history: List[Dict[str, Any]] = [
+            {
+                "iteration": 0,
+                "completeness": float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0),
+                "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
+                "gap_count": len(current_gap_report.get("gaps", [])),
+                "question_count": len(current_clarification_plan.get("questions", [])),
+                "auto_answer_count": len(current_clarification_plan.get("auto_answers", [])),
+            }
+        ]
+
+        iterations_completed = 0
+        stop_reason = "max_iterations_reached"
+
+        for iteration in range(1, max_iterations + 1):
+            completeness = float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0)
+            if completeness >= completeness_threshold:
+                stop_reason = "threshold_reached"
+                break
+
+            enriched_context = self._build_enriched_context(
+                clarification_plan=current_clarification_plan,
+                gap_report=current_gap_report,
+            )
+            if not enriched_context.strip():
+                stop_reason = "no_enriched_context"
+                break
+
+            current_results = self.extract_models_from_all_chunks(
+                use_rag=use_rag,
+                num_context_docs=num_context_docs,
+                num_literature_docs=num_literature_docs,
+                save_results=save_results,
+                enriched_context=enriched_context,
+                output_suffix=f"iter_{iteration}",
+            )
+            current_gap_report = self.detect_cross_chunk_gaps(
+                extraction_results=current_results,
+                save_results=save_results,
+                output_suffix=f"iter_{iteration}",
+            )
+            current_clarification_plan = self.generate_clarification_plan(
+                gap_report=current_gap_report,
+                save_results=save_results,
+                output_suffix=f"iter_{iteration}",
+            )
+
+            iterations_completed = iteration
+            history.append(
+                {
+                    "iteration": iteration,
+                    "completeness": float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0),
+                    "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
+                    "gap_count": len(current_gap_report.get("gaps", [])),
+                    "question_count": len(current_clarification_plan.get("questions", [])),
+                    "auto_answer_count": len(current_clarification_plan.get("auto_answers", [])),
+                }
+            )
+
+        if stop_reason == "max_iterations_reached":
+            final_completeness = float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0)
+            if final_completeness >= completeness_threshold:
+                stop_reason = "threshold_reached"
+
+        report = {
+            "iterations_completed": iterations_completed,
+            "max_iterations": max_iterations,
+            "completeness_threshold": completeness_threshold,
+            "stop_reason": stop_reason,
+            "history": history,
+            "final_completeness": float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0),
+            "final_testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
+            "final_gap_count": len(current_gap_report.get("gaps", [])),
+        }
+
+        if save_results:
+            self._write_json("outputs/extracted_models.json", current_results)
+            self._write_json(f"outputs/extracted_models_{self.run_id}.json", current_results)
+            self._write_json("outputs/cross_chunk_gap_report.json", current_gap_report)
+            self._write_json(f"outputs/cross_chunk_gap_report_{self.run_id}.json", current_gap_report)
+            self._write_json("outputs/clarification_plan.json", current_clarification_plan)
+            self._write_json(f"outputs/clarification_plan_{self.run_id}.json", current_clarification_plan)
+            self._write_json("outputs/refinement_loop_report.json", report)
+            self._write_json(f"outputs/refinement_loop_report_{self.run_id}.json", report)
+            print("Refinement loop report saved to outputs/refinement_loop_report.json")
+            print(f"Run-scoped refinement loop report saved to outputs/refinement_loop_report_{self.run_id}.json")
+
+        return {
+            "report": report,
+            "final_extraction_results": current_results,
+            "final_gap_report": current_gap_report,
+            "final_clarification_plan": current_clarification_plan,
+        }
 
     def _safe_completion_text(self, completion: Any) -> str:
         """Extract completion text defensively across provider edge cases."""

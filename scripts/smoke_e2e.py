@@ -72,6 +72,27 @@ def main() -> None:
     )
 
     t0 = time.time()
+    refinement_loop = extractor.run_refinement_loop(
+        extraction_results=extraction_results,
+        gap_report=gap_report,
+        clarification_plan=clarification_plan,
+        use_rag=True,
+        max_iterations=2,
+        completeness_threshold=0.75,
+        save_results=True,
+    )
+    loop_report = refinement_loop.get("report", {})
+    checkpoints.append(
+        {
+            "step": "refinement_loop",
+            "seconds": round(time.time() - t0, 2),
+            "iterations": loop_report.get("iterations_completed", 0),
+            "stop_reason": loop_report.get("stop_reason", "unknown"),
+            "final_completeness": loop_report.get("final_completeness", 0),
+        }
+    )
+
+    t0 = time.time()
     topic_analyzer = TopicAnalyzer(embedding_model=extractor.embedding_model_name, nr_topics=10, min_topic_size=2)
     texts = [c["text"] for c in chunks]
     topic_results = topic_analyzer.analyze_topics(texts, save_results=True)

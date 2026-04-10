@@ -79,6 +79,9 @@ def main():
         use_rag = st.checkbox("Use RAG Enhancement", value=True)
         use_literature = st.checkbox("Use Literature Retrieval", value=True)
         num_context_docs = st.slider("Number of Context Documents", 1, 10, 3)
+        use_refinement = st.checkbox("Use Refinement Loop", value=True)
+        max_refinement_iterations = st.slider("Max Refinement Iterations", 1, 5, 3)
+        completeness_threshold = st.slider("Completeness Threshold", 0.5, 1.0, 0.75, 0.05)
         
         # Topic analysis settings
         st.subheader("Topic Analysis Settings")
@@ -103,6 +106,8 @@ def main():
         st.session_state.gap_report = None
     if 'clarification_plan' not in st.session_state:
         st.session_state.clarification_plan = None
+    if 'refinement_loop' not in st.session_state:
+        st.session_state.refinement_loop = None
     
     # Tab 1: Data Upload
     with tab1:
@@ -287,6 +292,21 @@ def main():
                             st.session_state.gap_report,
                             save_results=True
                         )
+                        if use_refinement:
+                            st.session_state.refinement_loop = st.session_state.extractor.run_refinement_loop(
+                                extraction_results=st.session_state.extraction_results,
+                                gap_report=st.session_state.gap_report,
+                                clarification_plan=st.session_state.clarification_plan,
+                                use_rag=use_rag,
+                                max_iterations=max_refinement_iterations,
+                                completeness_threshold=completeness_threshold,
+                                save_results=True,
+                            )
+                            st.session_state.extraction_results = st.session_state.refinement_loop["final_extraction_results"]
+                            st.session_state.gap_report = st.session_state.refinement_loop["final_gap_report"]
+                            st.session_state.clarification_plan = st.session_state.refinement_loop["final_clarification_plan"]
+                        else:
+                            st.session_state.refinement_loop = None
                         
                         st.success(f"Extracted models from {len(st.session_state.extraction_results)} chunks")
                         
@@ -310,6 +330,13 @@ def main():
                                 "Clarification: "
                                 f"{len(st.session_state.clarification_plan.get('questions', []))} questions | "
                                 f"{len(st.session_state.clarification_plan.get('auto_answers', []))} literature auto-answers"
+                            )
+                        if st.session_state.refinement_loop:
+                            loop_report = st.session_state.refinement_loop.get("report", {})
+                            st.caption(
+                                "Refinement: "
+                                f"{loop_report.get('iterations_completed', 0)} iterations | "
+                                f"{loop_report.get('stop_reason', 'unknown')}"
                             )
                         
                     except Exception as e:
@@ -459,6 +486,14 @@ def main():
                 st.write("**Follow-up Questions**")
                 for q in questions[:8]:
                     st.write(f"- {q.get('question_id')}: {q.get('question_text')} ({q.get('answer_source')}, {q.get('priority')})")
+
+        if st.session_state.refinement_loop:
+            st.subheader("Refinement Loop")
+            loop_report = st.session_state.refinement_loop.get("report", {})
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Iterations", loop_report.get("iterations_completed", 0))
+            c2.metric("Final Completeness", f"{loop_report.get('final_completeness', 0)*100:.1f}%")
+            c3.metric("Stop Reason", loop_report.get("stop_reason", "unknown"))
 
 if __name__ == "__main__":
     main() 
