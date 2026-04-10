@@ -10,7 +10,7 @@ import instructor
 import yaml
 from openai import OpenAI
 
-from llm_survey.agents import CrossChunkGapDetector
+from llm_survey.agents import ClarificationAgent, CrossChunkGapDetector
 from llm_survey.prompts.model_extraction_prompts import (
     EXTRACTION_SYSTEM_PROMPT,
     format_prompt,
@@ -80,6 +80,7 @@ class RAGModelExtractor:
         self.semantic_scholar = SemanticScholarClient()
         self.pubmed = PubMedClient()
         self.gap_detector = CrossChunkGapDetector()
+        self.clarification_agent = ClarificationAgent()
 
         self.processed_chunks: List[Dict[str, Any]] = []
         self.run_id: str = generate_run_id("pipeline")
@@ -322,6 +323,33 @@ class RAGModelExtractor:
             print(f"Run-scoped gap report saved to {run_path}")
 
         return report
+
+    def generate_clarification_plan(
+        self,
+        gap_report: Dict[str, Any],
+        save_results: bool = True,
+        auto_answer_top_k: int = 3,
+    ) -> Dict[str, Any]:
+        """Convert gap report into actionable clarification questions."""
+        plan_model = self.clarification_agent.build_plan(
+            gap_report=gap_report,
+            literature_store=self.literature_store,
+            auto_answer_top_k=auto_answer_top_k,
+        )
+        plan = plan_model.model_dump()
+
+        if save_results:
+            latest_path = "outputs/clarification_plan.json"
+            run_path = f"outputs/clarification_plan_{self.run_id}.json"
+            os.makedirs("outputs", exist_ok=True)
+            with open(latest_path, "w", encoding="utf-8") as f:
+                json.dump(plan, f, indent=2, ensure_ascii=False)
+            with open(run_path, "w", encoding="utf-8") as f:
+                json.dump(plan, f, indent=2, ensure_ascii=False)
+            print(f"Clarification plan saved to {latest_path}")
+            print(f"Run-scoped clarification plan saved to {run_path}")
+
+        return plan
 
     def _safe_completion_text(self, completion: Any) -> str:
         """Extract completion text defensively across provider edge cases."""

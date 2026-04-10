@@ -60,6 +60,18 @@ def main() -> None:
     )
 
     t0 = time.time()
+    clarification_plan = extractor.generate_clarification_plan(gap_report, save_results=True)
+    checkpoints.append(
+        {
+            "step": "clarification_plan",
+            "seconds": round(time.time() - t0, 2),
+            "questions": len(clarification_plan.get("questions", [])),
+            "auto_answers": len(clarification_plan.get("auto_answers", [])),
+            "can_proceed_with_literature": clarification_plan.get("can_proceed_with_literature", False),
+        }
+    )
+
+    t0 = time.time()
     topic_analyzer = TopicAnalyzer(embedding_model=extractor.embedding_model_name, nr_topics=10, min_topic_size=2)
     texts = [c["text"] for c in chunks]
     topic_results = topic_analyzer.analyze_topics(texts, save_results=True)

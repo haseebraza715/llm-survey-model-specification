@@ -101,6 +101,8 @@ def main():
         st.session_state.topic_results = None
     if 'gap_report' not in st.session_state:
         st.session_state.gap_report = None
+    if 'clarification_plan' not in st.session_state:
+        st.session_state.clarification_plan = None
     
     # Tab 1: Data Upload
     with tab1:
@@ -281,6 +283,10 @@ def main():
                             st.session_state.extraction_results,
                             save_results=True
                         )
+                        st.session_state.clarification_plan = st.session_state.extractor.generate_clarification_plan(
+                            st.session_state.gap_report,
+                            save_results=True
+                        )
                         
                         st.success(f"Extracted models from {len(st.session_state.extraction_results)} chunks")
                         
@@ -298,6 +304,12 @@ def main():
                                 f"{st.session_state.gap_report.get('overall_model_completeness', 0)*100:.1f}% | "
                                 "testability: "
                                 f"{st.session_state.gap_report.get('model_testability_score', 0)*100:.1f}%"
+                            )
+                        if st.session_state.clarification_plan:
+                            st.caption(
+                                "Clarification: "
+                                f"{len(st.session_state.clarification_plan.get('questions', []))} questions | "
+                                f"{len(st.session_state.clarification_plan.get('auto_answers', []))} literature auto-answers"
                             )
                         
                     except Exception as e:
@@ -433,6 +445,20 @@ def main():
                 st.write("**Priority Gaps**")
                 for gap in priority_gaps:
                     st.write(f"- {gap}")
+
+        if st.session_state.clarification_plan:
+            st.subheader("Clarification Plan")
+            plan = st.session_state.clarification_plan
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Questions", len(plan.get("questions", [])))
+            c2.metric("Auto Answers", len(plan.get("auto_answers", [])))
+            c3.metric("Proceed w/ Literature", "Yes" if plan.get("can_proceed_with_literature") else "No")
+
+            questions = plan.get("questions", [])
+            if questions:
+                st.write("**Follow-up Questions**")
+                for q in questions[:8]:
+                    st.write(f"- {q.get('question_id')}: {q.get('question_text')} ({q.get('answer_source')}, {q.get('priority')})")
 
 if __name__ == "__main__":
     main() 

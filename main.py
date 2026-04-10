@@ -99,11 +99,23 @@ def run_complete_pipeline(
         f"completeness={gap_report.get('overall_model_completeness', 0):.2f}, "
         f"testability={gap_report.get('model_testability_score', 0):.2f}"
     )
+
+    # Step 4: Clarification planning
+    print("\nStep 4: Building clarification plan...")
+    clarification_plan = extractor.generate_clarification_plan(
+        gap_report=gap_report,
+        save_results=True,
+    )
+    print(
+        "Clarification planning complete: "
+        f"{len(clarification_plan.get('questions', []))} questions, "
+        f"auto_answers={len(clarification_plan.get('auto_answers', []))}"
+    )
     
-    # Step 4: Topic analysis (optional)
+    # Step 5: Topic analysis (optional)
     topic_results = None
     if perform_topic_analysis:
-        print("\nStep 4: Performing topic analysis...")
+        print("\nStep 5: Performing topic analysis...")
         TopicAnalyzer = get_topic_analyzer()
         if TopicAnalyzer:
             topic_analyzer = TopicAnalyzer(
@@ -125,8 +137,8 @@ def run_complete_pipeline(
         else:
             print("Topic analysis skipped due to dependency issues")
     
-    # Step 5: Generate comprehensive report
-    print("\nStep 5: Generating comprehensive report...")
+    # Step 6: Generate comprehensive report
+    print("\nStep 6: Generating comprehensive report...")
     
     report = {
         'pipeline_info': {
@@ -143,6 +155,7 @@ def run_complete_pipeline(
             'models': successful_extractions
         },
         'gap_detection': gap_report,
+        'clarification_plan': clarification_plan,
         'topic_analysis': topic_results if topic_results else None
     }
     
@@ -165,6 +178,7 @@ def run_complete_pipeline(
     print(f"Success rate: {report['extraction_results']['success_rate']*100:.1f}%")
     print(f"Model completeness: {gap_report.get('overall_model_completeness', 0)*100:.1f}%")
     print(f"Model testability: {gap_report.get('model_testability_score', 0)*100:.1f}%")
+    print(f"Clarification questions: {len(clarification_plan.get('questions', []))}")
     
     if topic_results:
         topic_info = topic_results['model_info']
