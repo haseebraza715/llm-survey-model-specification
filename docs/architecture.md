@@ -9,6 +9,7 @@ The system converts unstructured survey/interview text into structured scientifi
 - typed LLM extraction with schema enforcement
 - cross-chunk gap detection with completeness/testability scoring
 - clarification planning with source routing and optional literature auto-answers
+- iterative refinement loop with threshold/iteration stopping rules
 
 ## High-Level Pipeline
 
@@ -22,7 +23,8 @@ The system converts unstructured survey/interview text into structured scientifi
 8. Extract typed model per chunk with instructor + Pydantic schema
 9. Detect cross-chunk gaps and compute completeness/testability scores
 10. Build clarification plan from prioritized gaps
-11. Save run-scoped outputs and comprehensive report
+11. Re-run extraction with enriched clarification context until stop criteria are met
+12. Save run-scoped outputs and comprehensive report
 
 ## Core Components
 
@@ -96,6 +98,15 @@ Converts phase-4 gaps into actionable follow-up questions:
 
 Defines typed clarification question/plan/answer contracts.
 
+### Refinement Loop: `run_refinement_loop` in `src/llm_survey/rag_pipeline.py`
+
+Implements phase-6 iterative refinement:
+
+- checks completeness threshold each iteration
+- builds enriched context from clarification outputs
+- re-extracts and re-runs gap + clarification passes
+- tracks iteration history and stop reason
+
 ### Topic Analysis Engine: `src/llm_survey/topic_analysis.py`
 
 Main class: `TopicAnalyzer`
@@ -117,6 +128,8 @@ Main class: `TopicAnalyzer`
 - `outputs/cross_chunk_gap_report_<run_id>.json` run-scoped phase-4 report
 - `outputs/clarification_plan.json` latest phase-5 plan
 - `outputs/clarification_plan_<run_id>.json` run-scoped phase-5 plan
+- `outputs/refinement_loop_report.json` latest phase-6 loop report
+- `outputs/refinement_loop_report_<run_id>.json` run-scoped phase-6 loop report
 - `outputs/comprehensive_report.json` run-level summary
 - `outputs/topic_analysis.json` topic payload
 - `outputs/plots/` generated visualizations
@@ -131,6 +144,7 @@ Reliability is improved through:
 - typed extraction schema validation via instructor/Pydantic
 - explicit cross-chunk gap aggregation with deterministic scoring
 - deterministic clarification routing + literature-backed auto-answering
+- deterministic loop history + explicit stop conditions for iterative refinement
 
 Current practical bottlenecks:
 

@@ -45,6 +45,8 @@ Useful flags:
 ```bash
 python main.py --input <path> --no-rag
 python main.py --input <path> --no-literature
+python main.py --input <path> --no-refinement
+python main.py --input <path> --max-refinement-iterations 3 --completeness-threshold 0.75
 python main.py --input <path> --no-topic-analysis
 python main.py --input <path> --llm-model google/gemma-4-31b-it
 python main.py --input <path> --base-url https://openrouter.ai/api/v1
@@ -84,6 +86,8 @@ python -m streamlit run ui/dashboard.py
 - `outputs/cross_chunk_gap_report_<run_id>.json`
 - `outputs/clarification_plan.json`
 - `outputs/clarification_plan_<run_id>.json`
+- `outputs/refinement_loop_report.json`
+- `outputs/refinement_loop_report_<run_id>.json`
 - `outputs/comprehensive_report.json`
 - `outputs/topic_analysis.json` (if topic analysis enabled)
 - `outputs/topic_summary.md` (if topic analysis enabled)
@@ -139,7 +143,17 @@ Action:
 - verify literature retrieval populated `data/chroma/literature/`
 - improve retrieval quality (input quality, model choice, or rerun without `--no-literature`)
 
-## 6) Long-running full run
+## 6) Refinement loop reaches max iterations without improvement
+
+Symptoms:
+- `refinement_loop_report.json` shows `stop_reason=max_iterations_reached` and low final completeness
+
+Action:
+- inspect `history` in refinement report for iteration-by-iteration movement
+- check `clarification_plan.auto_answers` quality and availability
+- tune `--max-refinement-iterations` or `--completeness-threshold`
+
+## 7) Long-running full run
 
 Symptoms:
 - run appears slow or stalled

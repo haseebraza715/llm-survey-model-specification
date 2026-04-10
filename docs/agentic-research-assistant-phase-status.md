@@ -17,7 +17,7 @@ Status legend:
 | Phase 3 — Extraction Agent | typed schema extraction using instructor/function calling | DONE | Added typed extraction schema + instructor-based structured outputs, dual-context prompt (survey + literature), and explicit per-chunk gap extraction. |
 | Phase 4 — Gap Detection Agent | cross-chunk gap detection + completeness scoring | DONE | Added `CrossChunkGapDetector` with typed report schema, frequency-based prioritization, and completeness/testability scoring, integrated into pipeline outputs. |
 | Phase 5 — Clarification Agent | gap -> follow-up questions + answer source routing | DONE | Added `ClarificationAgent` with question generation, answer-source routing (`researcher`/`literature`/`either`), literature auto-answer synthesis, and persisted clarification plan outputs. |
-| Phase 6 — Re-Extraction Loop | iterative refinement loop with thresholds | NOT STARTED | Still single-pass extraction. |
+| Phase 6 — Re-Extraction Loop | iterative refinement loop with thresholds | DONE | Added `run_refinement_loop` with max-iteration + completeness-threshold stopping, enriched-context re-extraction, per-iteration scoring history, and persisted loop reports. |
 | Phase 7 — Consolidation Agent | deduplicate variables + consolidate relationships/hypotheses | NOT STARTED | No consolidation/merge module yet. |
 | Phase 8 — Conflict Detection & Resolution | contradiction detection and resolution cascade | NOT STARTED | No contradiction resolution workflow yet. |
 | Phase 9 — Literature Validation Agent | hypothesis-level support/contradiction scoring from papers | NOT STARTED | No dedicated scoring/validation layer yet. |
@@ -36,11 +36,12 @@ Status legend:
 - [x] Per-chunk gap extraction in structured output
 - [x] Cross-chunk gap aggregation and prioritized follow-up generation
 - [x] Clarification planning with auto-answer support from literature store
-- [x] Automated phase coverage tests for phases 1-5
+- [x] Iterative refinement loop with deterministic stop reasons and history tracking
+- [x] Automated phase coverage tests for phases 1-6
 
 ## Quick Percent Estimate
 
-Overall implementation progress against the saved full plan: **~50%**.
+Overall implementation progress against the saved full plan: **~58%**.
 
 ## Flow Alignment (Plan + Architecture SVG)
 
@@ -48,14 +49,14 @@ Overall implementation progress against the saved full plan: **~50%**.
 |---|---|---|
 | INGEST | Phase 1-2 | DONE |
 | EXTRACT | Phase 3-4 | DONE |
-| REFINE | Phase 5-7 | IN PROGRESS (Phase 5 complete, 6-7 pending) |
+| REFINE | Phase 5-7 | IN PROGRESS (Phase 5-6 complete, 7 pending) |
 | VALIDATE | Phase 8-9 | NOT STARTED |
 | OUTPUT | Phase 10-11 | IN PROGRESS |
 
 ## Implementation Readiness Verdict
 
-- **GO** for Phase 6+ implementation on top of a stable 1-5 foundation.
-- **NO-GO** for full target architecture completion until phases 6-11 are implemented.
+- **GO** for Phase 7+ implementation on top of a stable 1-6 foundation.
+- **NO-GO** for full target architecture completion until phases 7-11 are implemented.
 
 ## Evidence Pointers
 
@@ -66,4 +67,5 @@ Overall implementation progress against the saved full plan: **~50%**.
 - Typed schema: `src/llm_survey/schemas/extraction.py`
 - Gap detection: `src/llm_survey/agents/gap_detection.py`, `src/llm_survey/schemas/gap.py`
 - Clarification: `src/llm_survey/agents/clarification.py`, `src/llm_survey/schemas/clarification.py`
-- Tests: `tests/test_preprocess_phase1.py`, `tests/test_rag_phase2.py`, `tests/test_extraction_phase3.py`, `tests/test_gap_detection_phase4.py`, `tests/test_clarification_phase5.py`
+- Refinement loop: `src/llm_survey/rag_pipeline.py` (`run_refinement_loop`)
+- Tests: `tests/test_preprocess_phase1.py`, `tests/test_rag_phase2.py`, `tests/test_extraction_phase3.py`, `tests/test_gap_detection_phase4.py`, `tests/test_clarification_phase5.py`, `tests/test_refinement_phase6.py`

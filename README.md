@@ -10,6 +10,7 @@ Core capabilities:
 - LLM-based structured extraction (typed schema via instructor + Pydantic)
 - cross-chunk gap detection with completeness and testability scoring
 - clarification planning with question routing (`researcher`/`literature`/`either`) and literature auto-answers
+- iterative refinement loop with completeness threshold + max-iteration stop logic
 - topic modeling and keyword analysis for cross-response patterns
 
 Main entry points:
@@ -50,6 +51,12 @@ Disable literature retrieval if you want a faster/offline-friendly run:
 
 ```bash
 python main.py --input data/raw/synthetic_workplace_survey.csv --api-key YOUR_OPENROUTER_KEY --no-literature
+```
+
+Disable iterative refinement loop:
+
+```bash
+python main.py --input data/raw/synthetic_workplace_survey.csv --api-key YOUR_OPENROUTER_KEY --no-refinement
 ```
 
 Run the smoke test:

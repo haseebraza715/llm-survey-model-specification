@@ -2,7 +2,7 @@
 
 ## System Summary
 
-The pipeline ingests qualitative data from multiple file formats, cleans and deduplicates responses, chunks them into sentence-aware units, and stores survey chunks in a persistent vector store. It then builds a second literature vector store (Semantic Scholar + PubMed abstracts), performs typed model extraction per chunk using instructor-backed schema validation, runs a cross-chunk gap detection pass with completeness/testability scoring, and generates a clarification plan with source routing and optional literature auto-answers.
+The pipeline ingests qualitative data from multiple file formats, cleans and deduplicates responses, chunks them into sentence-aware units, and stores survey chunks in a persistent vector store. It then builds a second literature vector store (Semantic Scholar + PubMed abstracts), performs typed model extraction per chunk using instructor-backed schema validation, runs a cross-chunk gap detection pass with completeness/testability scoring, generates a clarification plan with source routing and optional literature auto-answers, and executes iterative re-extraction until completeness improves or loop limits are reached.
 
 Primary components:
 - [`main.py`](main.py): CLI orchestration and reporting
@@ -17,6 +17,7 @@ Primary components:
 - [`src/llm_survey/schemas/gap.py`](src/llm_survey/schemas/gap.py): gap report schema
 - [`src/llm_survey/agents/clarification.py`](src/llm_survey/agents/clarification.py): clarification question planning + literature auto-answering
 - [`src/llm_survey/schemas/clarification.py`](src/llm_survey/schemas/clarification.py): clarification plan schema
+- refinement loop in [`src/llm_survey/rag_pipeline.py`](src/llm_survey/rag_pipeline.py): iterative re-extraction and stopping policy
 
 ## Data Flow
 
@@ -35,7 +36,8 @@ flowchart TD
     J --> K[Per-Chunk Extraction Results]
     K --> L[Cross-Chunk Gap Detection]
     L --> M[Clarification Planning]
-    M --> N[Comprehensive Report]
+    M --> N[Iterative Refinement Loop]
+    N --> O[Comprehensive Report]
 ```
 
 ## Outputs
@@ -48,5 +50,7 @@ flowchart TD
 - `outputs/cross_chunk_gap_report_<run_id>.json`
 - `outputs/clarification_plan.json`
 - `outputs/clarification_plan_<run_id>.json`
+- `outputs/refinement_loop_report.json`
+- `outputs/refinement_loop_report_<run_id>.json`
 - [`outputs/comprehensive_report.json`](outputs/comprehensive_report.json)
 - [`outputs/topic_analysis.json`](outputs/topic_analysis.json) (when topic analysis is enabled)

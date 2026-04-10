@@ -17,8 +17,9 @@ Key functions:
     3. extract models
     4. detect cross-chunk gaps + score completeness/testability
     5. build clarification plan
-    6. optional topic analysis
-    7. write `outputs/comprehensive_report.json`
+    6. run iterative refinement loop (optional)
+    7. optional topic analysis
+    8. write `outputs/comprehensive_report.json`
 - `run_interactive_mode()`
   - CLI prompt flow for manual execution.
 - `create_sample_data()`
@@ -126,6 +127,10 @@ Key methods:
   - Converts cross-chunk gaps into actionable follow-up questions.
   - Routes questions to `researcher`, `literature`, or `either`.
   - Writes `outputs/clarification_plan*.json`.
+- `run_refinement_loop(...)`
+  - Iteratively re-runs extraction with enriched clarification context.
+  - Stops when completeness threshold is met or max iterations are reached.
+  - Writes `outputs/refinement_loop_report*.json` and refreshed final outputs.
 
 ## `src/llm_survey/agents/gap_detection.py`
 
@@ -148,6 +153,16 @@ Phase-5 clarification planner.
 - Computes:
   - `estimated_new_data_needed`
   - `can_proceed_with_literature`
+
+## Phase 6 Loop Behavior
+
+The refinement loop progressively enriches context and tracks:
+
+- iteration number
+- completeness score
+- testability score
+- gap/question/auto-answer counts
+- stop condition (`threshold_reached`, `max_iterations_reached`, `no_enriched_context`)
 
 ## `src/llm_survey/topic_analysis.py`
 
@@ -181,3 +196,4 @@ Phase-focused tests:
 - `test_extraction_phase3.py`: typed extraction path with mocked instructor client
 - `test_gap_detection_phase4.py`: cross-chunk gap aggregation, scoring, and output persistence
 - `test_clarification_phase5.py`: clarification routing, auto-answer synthesis, and plan output persistence
+- `test_refinement_phase6.py`: loop stopping behavior, iterative improvement path, and report persistence
