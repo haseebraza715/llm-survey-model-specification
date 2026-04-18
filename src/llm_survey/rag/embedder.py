@@ -58,7 +58,7 @@ class CachedEmbedder:
             return _FallbackEmbeddingModel()
         try:
             return SentenceTransformer(model_name)
-        except Exception:
+        except (OSError, RuntimeError, ImportError, ValueError):
             return _FallbackEmbeddingModel()
 
     @staticmethod

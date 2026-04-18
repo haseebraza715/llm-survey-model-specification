@@ -86,7 +86,7 @@ class ClarificationAgent:
         """Synthesize a concise answer from retrieved literature snippets."""
         try:
             matches = literature_store.query(question_text, k=max(1, top_k))
-        except Exception:
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
             return None
 
         if not matches:
@@ -131,7 +131,7 @@ class ClarificationAgent:
         if literature_store is not None:
             try:
                 literature_available = len(literature_store.query(question_text, k=1)) > 0
-            except Exception:
+            except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
                 literature_available = False
 
         if gap_type in {"no_measurement", "missing_mechanism"}:
@@ -160,7 +160,7 @@ class ClarificationAgent:
     def _safe_priority(value: str) -> ClarificationPriority:
         try:
             return ClarificationPriority(str(value).lower())
-        except Exception:
+        except ValueError:
             return ClarificationPriority.MEDIUM
 
     @staticmethod

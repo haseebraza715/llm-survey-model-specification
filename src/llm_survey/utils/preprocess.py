@@ -45,6 +45,15 @@ def ensure_nltk_resources() -> None:
         nltk.download("punkt_tab", quiet=True)
 
 
+def create_sample_data() -> str:
+    """Return path to the bundled synthetic workplace survey CSV (realistic qualitative-style rows)."""
+    root = Path(__file__).resolve().parents[3]
+    path = root / "data" / "raw" / "synthetic_workplace_survey.csv"
+    if not path.is_file():
+        raise FileNotFoundError(f"Bundled sample survey not found at {path}")
+    return str(path)
+
+
 def generate_run_id(prefix: str = "run") -> str:
     """Generate a stable, sortable run id."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -265,7 +274,7 @@ def detect_language(text: str) -> str:
         return "unknown"
     try:
         return detect(text)
-    except Exception:
+    except (ValueError, TypeError, ImportError, AttributeError):
         return "unknown"
 
 
