@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.*
+venv
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.cursor
+data/chroma
+data/processed
+data/embedding_cache
+outputs
+docs

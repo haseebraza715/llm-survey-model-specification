@@ -1,0 +1,63 @@
+# Mirrors the repository to a Hugging Face Space when secrets are configured.
+# Required repo secrets: HF_TOKEN, HF_SPACE_REPO (e.g. "username/qualitative-model-drafter").
+
+name: Deploy Hugging Face Space
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install huggingface_hub
+        run: pip install "huggingface_hub==0.26.2"
+
+      - name: Upload workspace to Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_REPO: ${{ secrets.HF_SPACE_REPO }}
+        run: |
+          python <<'PY'
+          import os
+          import sys
+
+          from huggingface_hub import HfApi
+
+          repo = os.environ.get("HF_SPACE_REPO", "").strip()
+          token = (
+              os.environ.get("HF_TOKEN", "").strip()
+              or os.environ.get("HUGGING_FACE_HUB_TOKEN", "").strip()
+          )
+          if not repo or not token:
+              print("HF_SPACE_REPO or HF_TOKEN missing — skipping deploy.")
+              sys.exit(0)
+
+          api = HfApi(token=token)
+          api.upload_folder(
+              folder_path=".",
+              repo_id=repo,
+              repo_type="space",
+              path_in_repo=".",
+              ignore_patterns=[
+                  ".git/**",
+                  "**/__pycache__/**",
+                  ".env",
+                  ".env.*",
+                  "venv/**",
+                  ".pytest_cache/**",
+                  "data/chroma/**",
+                  "outputs/**",
+                  "data/processed/**",
+              ],
+          )
+          print("Uploaded to Space:", repo)
+          PY
