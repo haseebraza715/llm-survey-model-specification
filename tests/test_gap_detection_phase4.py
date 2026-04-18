@@ -67,7 +67,7 @@ def test_cross_chunk_gap_detector_builds_report_with_scores() -> None:
     report = detector.detect(extraction_results)
 
     assert len(report.gaps) >= 2
-    assert 0.0 <= report.overall_model_completeness < 1.0
+    assert 0.0 <= report.structural_coverage_score < 1.0
     assert 0.0 <= report.model_testability_score < 1.0
     assert len(report.priority_gaps) <= 3
     gap_types = {g.gap_type.value for g in report.gaps}
@@ -80,7 +80,7 @@ def test_cross_chunk_gap_detector_handles_no_successful_models() -> None:
     report = detector.detect([{"success": False, "model": None}])
 
     assert report.gaps == []
-    assert report.overall_model_completeness == 0.0
+    assert report.structural_coverage_score == 0.0
     assert report.model_testability_score == 0.0
     assert report.priority_gaps == []
 

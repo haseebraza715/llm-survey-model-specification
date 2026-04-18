@@ -32,7 +32,7 @@ def test_refinement_loop_stops_immediately_when_threshold_met(monkeypatch: pytes
 
     result = extractor.run_refinement_loop(
         extraction_results=[{"success": True, "model": {}}],
-        gap_report={"overall_model_completeness": 0.9, "model_testability_score": 0.8, "gaps": []},
+        gap_report={"structural_coverage_score": 0.9, "model_testability_score": 0.8, "gaps": []},
         clarification_plan={"questions": [], "auto_answers": []},
         max_iterations=3,
         completeness_threshold=0.75,
@@ -57,8 +57,8 @@ def test_refinement_loop_runs_until_threshold(monkeypatch: pytest.MonkeyPatch, t
     def fake_detect_cross_chunk_gaps(extraction_results, save_results=True, output_suffix=""):
         i = state["iter"]
         if i == 1:
-            return {"overall_model_completeness": 0.5, "model_testability_score": 0.5, "gaps": [{"description": "g1"}]}
-        return {"overall_model_completeness": 0.8, "model_testability_score": 0.75, "gaps": []}
+            return {"structural_coverage_score": 0.5, "model_testability_score": 0.5, "gaps": [{"description": "g1"}]}
+        return {"structural_coverage_score": 0.8, "model_testability_score": 0.75, "gaps": []}
 
     def fake_generate_clarification_plan(gap_report, save_results=True, auto_answer_top_k=3, output_suffix=""):
         if gap_report.get("gaps"):
@@ -74,7 +74,7 @@ def test_refinement_loop_runs_until_threshold(monkeypatch: pytest.MonkeyPatch, t
 
     result = extractor.run_refinement_loop(
         extraction_results=[{"success": True, "model": {}}],
-        gap_report={"overall_model_completeness": 0.2, "model_testability_score": 0.2, "gaps": [{"description": "g"}]},
+        gap_report={"structural_coverage_score": 0.2, "model_testability_score": 0.2, "gaps": [{"description": "g"}]},
         clarification_plan={
             "questions": [{"question_id": "Q1", "question_text": "How?", "priority": "high", "answer_source": "either"}],
             "auto_answers": [{"question_id": "Q1", "answer_text": "Evidence text"}],
@@ -95,7 +95,7 @@ def test_refinement_loop_stops_when_no_enriched_context(monkeypatch: pytest.Monk
 
     result = extractor.run_refinement_loop(
         extraction_results=[{"success": True, "model": {}}],
-        gap_report={"overall_model_completeness": 0.1, "model_testability_score": 0.2, "gaps": [{"description": "g"}]},
+        gap_report={"structural_coverage_score": 0.1, "model_testability_score": 0.2, "gaps": [{"description": "g"}]},
         clarification_plan={"questions": [], "auto_answers": []},
         max_iterations=2,
         completeness_threshold=0.75,
