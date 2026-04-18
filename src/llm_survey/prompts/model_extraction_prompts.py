@@ -1,4 +1,6 @@
-from typing import Dict, Any
+from typing import Any, Dict
+
+from llm_survey.utils.prompt_safety import build_structured_extraction_user_message
 
 # Base prompt for extracting variables and relationships
 BASE_EXTRACTION_PROMPT = """You are an AI scientific assistant specialized in extracting variables and relationships from qualitative survey data.
@@ -175,31 +177,12 @@ EXTRACTION_SYSTEM_PROMPT = """You are a senior qualitative research extraction a
 Return only schema-valid JSON for the requested response model.
 Keep outputs grounded in the provided chunk text.
 Use survey and literature context only to improve precision, never to invent unsupported claims.
-Always populate the gaps field with concrete missing-information items when appropriate."""
+Always populate the gaps field with concrete missing-information items when appropriate.
 
-
-EXTRACTION_USER_PROMPT = """Extract a structured scientific model from the chunk below.
-
-Chunk Text:
-{chunk_text}
-
-Survey Context (nearest survey chunks):
-{survey_context}
-
-Literature Context (nearest paper snippets):
-{literature_context}
-
-Instructions:
-1. Extract variables, relationships, hypotheses, and moderators explicitly stated or strongly implied.
-2. Relationship direction must be one of: positive, negative, unclear, conditional.
-3. Include supporting quotes from the chunk for variables and relationships.
-4. Confidence values must be between 0 and 1.
-5. Identify what is missing by filling gaps:
-   - missing variable definitions
-   - unclear mechanisms
-   - untestable or ambiguous relationships
-   - missing boundary conditions
-6. Keep extraction_notes concise and useful for reviewers.
+For every variable, relationship, hypothesis, and moderator:
+- source_chunk_ids: list the chunk id you are extracting from (provided in user message metadata if present).
+- evidence_strength: "direct" if the participant literally stated the construct; "inferred" if it is a reasonable
+  reading but not explicit; "weak" if evidence is a single ambiguous phrase or very thin.
 """
 
 
@@ -224,9 +207,9 @@ def format_structured_extraction_prompt(
     survey_context: str,
     literature_context: str,
 ) -> str:
-    """Build user prompt for typed extraction."""
-    return EXTRACTION_USER_PROMPT.format(
-        chunk_text=chunk_text or "",
-        survey_context=survey_context or "No survey context available.",
-        literature_context=literature_context or "No literature context available.",
+    """Build user prompt for typed extraction (user text is never passed through str.format)."""
+    return build_structured_extraction_user_message(
+        chunk_text or "",
+        survey_context or "",
+        literature_context or "",
     )
