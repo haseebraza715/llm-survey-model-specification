@@ -1,0 +1,18 @@
+{
+  "gold_items": 9,
+  "extracted_relationships": 10,
+  "true_positives_matched_gold": 9,
+  "false_positives": 1,
+  "false_negatives": 0,
+  "precision": 0.9,
+  "recall": 1.0,
+  "false_positive_examples": [
+    {
+      "chunk_id": "respondent_1_chunk_0",
+      "from_variable": "Organizational culture",
+      "to_variable": "Job crafting"
+    }
+  ],
+  "gold_path": "docs/fixtures/evaluation_gold_fixture_subset.json",
+  "extractions_path": "docs/fixtures/extracted_models_eval_fixture.json"
+}

@@ -1,0 +1,59 @@
+{
+  "corpus_note": "Gold edges scoped to respondents 1,2,3,7,20 only — pairs with docs/fixtures/extracted_models_eval_fixture.json",
+  "relationships": [
+    {
+      "id": "GF01",
+      "from_substrings": ["workload", "deadline"],
+      "to_substrings": ["stress", "overwhelm"],
+      "respondent_hint": "respondent_1"
+    },
+    {
+      "id": "GF02",
+      "from_substrings": ["manager", "guidance"],
+      "to_substrings": ["stress", "worse"],
+      "respondent_hint": "respondent_1"
+    },
+    {
+      "id": "GF03",
+      "from_substrings": ["communication"],
+      "to_substrings": ["uncertain", "priorit"],
+      "respondent_hint": "respondent_1"
+    },
+    {
+      "id": "GF04",
+      "from_substrings": ["team", "support"],
+      "to_substrings": ["anxiety", "stress"],
+      "respondent_hint": "respondent_2"
+    },
+    {
+      "id": "GF05",
+      "from_substrings": ["structure", "timeline", "check"],
+      "to_substrings": ["confiden", "productive"],
+      "respondent_hint": "respondent_3"
+    },
+    {
+      "id": "GF06",
+      "from_substrings": ["control", "schedule"],
+      "to_substrings": ["stress"],
+      "respondent_hint": "respondent_7"
+    },
+    {
+      "id": "GF07",
+      "from_substrings": ["meeting", "interrupt"],
+      "to_substrings": ["stress"],
+      "respondent_hint": "respondent_7"
+    },
+    {
+      "id": "GF08",
+      "from_substrings": ["trust"],
+      "to_substrings": ["confiden", "productiv"],
+      "respondent_hint": "respondent_20"
+    },
+    {
+      "id": "GF09",
+      "from_substrings": ["micromanag", "check"],
+      "to_substrings": ["anxiety"],
+      "respondent_hint": "respondent_20"
+    }
+  ]
+}

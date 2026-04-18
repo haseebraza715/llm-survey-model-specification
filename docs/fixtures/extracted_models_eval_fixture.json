@@ -1,0 +1,162 @@
+[
+  {
+    "chunk_id": "respondent_1_chunk_0",
+    "success": true,
+    "model": {
+      "variables": [],
+      "relationships": [
+        {
+          "from_variable": "Workload",
+          "to_variable": "Stress",
+          "direction": "positive",
+          "mechanism": "More deadlines increase overwhelm.",
+          "supporting_quote": "I feel overwhelmed when I have too many deadlines at work.",
+          "confidence": 0.9,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_1_chunk_0"]
+        },
+        {
+          "from_variable": "Manager guidance",
+          "to_variable": "Stress",
+          "direction": "positive",
+          "mechanism": "Unclear guidance worsens stress.",
+          "supporting_quote": "My manager doesn't provide clear guidance, which makes it worse.",
+          "confidence": 0.85,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_1_chunk_0"]
+        },
+        {
+          "from_variable": "Communication clarity",
+          "to_variable": "Uncertainty about priorities",
+          "direction": "positive",
+          "mechanism": "Lack of communication creates uncertainty.",
+          "supporting_quote": "The lack of communication creates uncertainty about priorities.",
+          "confidence": 0.8,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_1_chunk_0"]
+        },
+        {
+          "from_variable": "Organizational culture",
+          "to_variable": "Job crafting",
+          "direction": "positive",
+          "mechanism": "Culture shapes how employees frame tasks.",
+          "supporting_quote": "Narrative stretch not present in this chunk.",
+          "confidence": 0.55,
+          "evidence_strength": "inferred",
+          "source_chunk_ids": ["respondent_1_chunk_0"]
+        }
+      ],
+      "hypotheses": [],
+      "moderators": [],
+      "gaps": []
+    }
+  },
+  {
+    "chunk_id": "respondent_2_chunk_0",
+    "success": true,
+    "model": {
+      "variables": [],
+      "relationships": [
+        {
+          "from_variable": "Team support",
+          "to_variable": "Anxiety",
+          "direction": "negative",
+          "mechanism": "Colleagues buffer deadline stress.",
+          "supporting_quote": "Team support really helps when I'm stressed about deadlines.",
+          "confidence": 0.88,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_2_chunk_0"]
+        }
+      ],
+      "hypotheses": [],
+      "moderators": [],
+      "gaps": []
+    }
+  },
+  {
+    "chunk_id": "respondent_3_chunk_0",
+    "success": true,
+    "model": {
+      "variables": [],
+      "relationships": [
+        {
+          "from_variable": "Project structure",
+          "to_variable": "Self-confidence at work",
+          "direction": "positive",
+          "mechanism": "Timelines and check-ins increase confidence.",
+          "supporting_quote": "When I have a clear project timeline and regular check-ins with my supervisor, I feel much more confident and productive.",
+          "confidence": 0.86,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_3_chunk_0"]
+        }
+      ],
+      "hypotheses": [],
+      "moderators": [],
+      "gaps": []
+    }
+  },
+  {
+    "chunk_id": "respondent_7_chunk_0",
+    "success": true,
+    "model": {
+      "variables": [],
+      "relationships": [
+        {
+          "from_variable": "Schedule control",
+          "to_variable": "Stress",
+          "direction": "negative",
+          "mechanism": "More perceived control lowers stress.",
+          "supporting_quote": "My stress levels directly correlate with how much control I feel over my schedule.",
+          "confidence": 0.82,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_7_chunk_0"]
+        },
+        {
+          "from_variable": "Meeting load",
+          "to_variable": "Stress",
+          "direction": "positive",
+          "mechanism": "Interruptions spike stress.",
+          "supporting_quote": "when meetings constantly interrupt my flow, my stress spikes",
+          "confidence": 0.8,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_7_chunk_0"]
+        }
+      ],
+      "hypotheses": [],
+      "moderators": [],
+      "gaps": []
+    }
+  },
+  {
+    "chunk_id": "respondent_20_chunk_0",
+    "success": true,
+    "model": {
+      "variables": [],
+      "relationships": [
+        {
+          "from_variable": "Manager trust",
+          "to_variable": "Self-confidence",
+          "direction": "positive",
+          "mechanism": "Trust increases confidence and throughput.",
+          "supporting_quote": "When my manager trusts me to do my job without micromanaging, my confidence and productivity increase.",
+          "confidence": 0.84,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_20_chunk_0"]
+        },
+        {
+          "from_variable": "Micromanagement",
+          "to_variable": "Anxiety",
+          "direction": "positive",
+          "mechanism": "Excessive check-ins create anxiety.",
+          "supporting_quote": "when they constantly check in or second-guess my decisions, it creates anxiety",
+          "confidence": 0.83,
+          "evidence_strength": "direct",
+          "source_chunk_ids": ["respondent_20_chunk_0"]
+        }
+      ],
+      "hypotheses": [],
+      "moderators": [],
+      "gaps": []
+    }
+  }
+]

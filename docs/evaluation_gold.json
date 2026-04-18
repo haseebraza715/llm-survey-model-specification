@@ -1,0 +1,97 @@
+{
+  "corpus": "data/raw/synthetic_workplace_survey.csv",
+  "coder": "maintainer hand-code v1",
+  "notes": "Directed substantive links a careful reader would defend. Matching: at least one from_substring appears in the extracted from-variable AND at least one to_substring in the extracted to-variable (case-insensitive); chunk_id must contain respondent_hint. See scripts/compute_eval_metrics.py.",
+  "relationships": [
+    {
+      "id": "HG01",
+      "from_substrings": ["deadline", "workload", "demand"],
+      "to_substrings": ["stress", "overwhelm", "pressure"],
+      "respondent_hint": "respondent_1"
+    },
+    {
+      "id": "HG02",
+      "from_substrings": ["manager", "guidance", "supervisor"],
+      "to_substrings": ["stress", "worse", "uncertain", "overwhelm"],
+      "respondent_hint": "respondent_1"
+    },
+    {
+      "id": "HG03",
+      "from_substrings": ["communication"],
+      "to_substrings": ["uncertain", "priority", "clarity"],
+      "respondent_hint": "respondent_1"
+    },
+    {
+      "id": "HG04",
+      "from_substrings": ["support", "team", "colleague"],
+      "to_substrings": ["stress", "anxiety"],
+      "respondent_hint": "respondent_2"
+    },
+    {
+      "id": "HG05",
+      "from_substrings": ["timeline", "structure", "check"],
+      "to_substrings": ["confiden", "productive"],
+      "respondent_hint": "respondent_3"
+    },
+    {
+      "id": "HG06",
+      "from_substrings": ["priorit"],
+      "to_substrings": ["workload", "manag"],
+      "respondent_hint": "respondent_4"
+    },
+    {
+      "id": "HG07",
+      "from_substrings": ["urgent", "interrupt"],
+      "to_substrings": ["disrupt", "throw"],
+      "respondent_hint": "respondent_4"
+    },
+    {
+      "id": "HG08",
+      "from_substrings": ["autonom"],
+      "to_substrings": ["perform", "motivat", "best"],
+      "respondent_hint": "respondent_5"
+    },
+    {
+      "id": "HG09",
+      "from_substrings": ["remote", "home", "isolat"],
+      "to_substrings": ["creativ", "collaborat"],
+      "respondent_hint": "respondent_6"
+    },
+    {
+      "id": "HG10",
+      "from_substrings": ["control", "schedule", "meet"],
+      "to_substrings": ["stress", "productiv"],
+      "respondent_hint": "respondent_7"
+    },
+    {
+      "id": "HG11",
+      "from_substrings": ["manager", "feedback"],
+      "to_substrings": ["satisfaction", "motivat", "valued"],
+      "respondent_hint": "respondent_8"
+    },
+    {
+      "id": "HG12",
+      "from_substrings": ["boundary", "email", "night", "home"],
+      "to_substrings": ["stress"],
+      "respondent_hint": "respondent_9"
+    },
+    {
+      "id": "HG13",
+      "from_substrings": ["communicat", "conflict", "team"],
+      "to_substrings": ["stress", "energy", "drain"],
+      "respondent_hint": "respondent_10"
+    },
+    {
+      "id": "HG14",
+      "from_substrings": ["deadline", "pressure", "time"],
+      "to_substrings": ["quality", "frustrat", "stress"],
+      "respondent_hint": "respondent_12"
+    },
+    {
+      "id": "HG15",
+      "from_substrings": ["micromanag", "trust"],
+      "to_substrings": ["anxiety", "confidence", "productiv"],
+      "respondent_hint": "respondent_20"
+    }
+  ]
+}
