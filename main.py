@@ -41,7 +41,7 @@ def run_complete_pipeline(
     extra_headers: Dict[str, str] | None = None,
     enable_literature_retrieval: bool = True,
     enable_refinement_loop: bool = True,
-    max_refinement_iterations: int = 3,
+    max_refinement_iterations: int = 2,
     completeness_threshold: float = 0.75,
 ) -> Dict[str, Any]:
     """
@@ -99,7 +99,7 @@ def run_complete_pipeline(
     print(
         "Gap detection complete: "
         f"{len(gap_report.get('gaps', []))} gaps, "
-        f"completeness={gap_report.get('overall_model_completeness', 0):.2f}, "
+        f"coverage={gap_report.get('structural_coverage_score', gap_report.get('overall_model_completeness', 0)):.2f}, "
         f"testability={gap_report.get('model_testability_score', 0):.2f}"
     )
 
@@ -210,7 +210,8 @@ def run_complete_pipeline(
     print(f"Total chunks processed: {len(processed_chunks)}")
     print(f"Models extracted: {len(successful_extractions)}/{len(extraction_results)}")
     print(f"Success rate: {report['extraction_results']['success_rate']*100:.1f}%")
-    print(f"Model completeness: {gap_report.get('overall_model_completeness', 0)*100:.1f}%")
+    cov = gap_report.get("structural_coverage_score", gap_report.get("overall_model_completeness", 0))
+    print(f"Structural coverage (heuristic): {float(cov)*100:.1f}%")
     print(f"Model testability: {gap_report.get('model_testability_score', 0)*100:.1f}%")
     print(f"Clarification questions: {len(clarification_plan.get('questions', []))}")
     if refinement_loop:
@@ -251,13 +252,13 @@ def run_interactive_mode():
     use_rag = input("Use RAG enhancement? (y/n, default: y): ").strip().lower() != 'n'
     use_literature = input("Enable literature retrieval? (y/n, default: y): ").strip().lower() != 'n'
     use_refinement = input("Enable refinement loop? (y/n, default: y): ").strip().lower() != 'n'
-    max_iterations_raw = input("Max refinement iterations (default: 3): ").strip()
+    max_iterations_raw = input("Max refinement iterations (default: 2): ").strip()
     threshold_raw = input("Completeness threshold 0-1 (default: 0.75): ").strip()
     perform_topic_analysis = input("Perform topic analysis? (y/n, default: y): ").strip().lower() != 'n'
     try:
-        max_iterations = int(max_iterations_raw) if max_iterations_raw else 3
+        max_iterations = int(max_iterations_raw) if max_iterations_raw else 2
     except ValueError:
-        max_iterations = 3
+        max_iterations = 2
     try:
         threshold = float(threshold_raw) if threshold_raw else 0.75
     except ValueError:
@@ -280,42 +281,12 @@ def run_interactive_mode():
     except Exception as e:
         print(f"\nError running pipeline: {str(e)}")
 
-def create_sample_data():
-    """Create sample data for testing."""
-    sample_data = [
-        {
-            "speaker_id": "respondent_1",
-            "text": "I feel overwhelmed when I have too many deadlines at work. My manager doesn't provide clear guidance, which makes it worse.",
-            "timestamp": "2024-01-15"
-        },
-        {
-            "speaker_id": "respondent_2", 
-            "text": "Team support really helps when I'm stressed about deadlines. Having colleagues to bounce ideas off of reduces my anxiety.",
-            "timestamp": "2024-01-15"
-        },
-        {
-            "speaker_id": "respondent_3",
-            "text": "When I have a clear project timeline and regular check-ins with my supervisor, I feel much more confident and productive.",
-            "timestamp": "2024-01-16"
-        },
-        {
-            "speaker_id": "respondent_4",
-            "text": "The workload is manageable when I can prioritize tasks effectively. However, unexpected urgent requests throw everything off.",
-            "timestamp": "2024-01-16"
-        },
-        {
-            "speaker_id": "respondent_5",
-            "text": "I perform best when I have autonomy in my work but also know I can ask for help when needed.",
-            "timestamp": "2024-01-17"
-        }
-    ]
-    
-    # Save as CSV
-    import pandas as pd
-    df = pd.DataFrame(sample_data)
-    os.makedirs("data/raw", exist_ok=True)
-    df.to_csv("data/raw/sample_survey_data.csv", index=False)
-    print("Sample data created: data/raw/sample_survey_data.csv")
+def create_sample_data() -> None:
+    """Print the path to the bundled synthetic survey (preferred sample for demos)."""
+    from llm_survey.utils.preprocess import create_sample_data as bundled_sample_path
+
+    path = bundled_sample_path()
+    print(f"Bundled sample survey: {path}")
 
 def main():
     parser = argparse.ArgumentParser(description="LLM Model Specification Generator")
@@ -330,8 +301,13 @@ def main():
     parser.add_argument("--base-url", default="https://openrouter.ai/api/v1", help="OpenRouter-compatible base URL")
     parser.add_argument("--no-literature", action="store_true", help="Disable literature retrieval/enrichment")
     parser.add_argument("--no-refinement", action="store_true", help="Disable iterative refinement loop")
-    parser.add_argument("--max-refinement-iterations", type=int, default=3, help="Maximum refinement iterations")
-    parser.add_argument("--completeness-threshold", type=float, default=0.75, help="Stop loop when completeness reaches this threshold")
+    parser.add_argument("--max-refinement-iterations", type=int, default=2, help="Maximum refinement iterations")
+    parser.add_argument(
+        "--completeness-threshold",
+        type=float,
+        default=0.75,
+        help="Stop refinement when structural coverage heuristic reaches this threshold",
+    )
     parser.add_argument("--http-referer", default="", help="Optional HTTP Referer header for OpenRouter")
     parser.add_argument("--x-title", default="", help="Optional X-Title header for OpenRouter")
     

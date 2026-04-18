@@ -54,7 +54,7 @@ def main() -> None:
             "step": "gap_detection",
             "seconds": round(time.time() - t0, 2),
             "gaps": len(gap_report.get("gaps", [])),
-            "completeness": gap_report.get("overall_model_completeness", 0),
+            "coverage": gap_report.get("structural_coverage_score", gap_report.get("overall_model_completeness", 0)),
             "testability": gap_report.get("model_testability_score", 0),
         }
     )
