@@ -10,6 +10,8 @@ ENV/
 
 # Data and outputs
 data/processed/
+data/chroma/
+data/embedding_cache/
 outputs/
 embeddings/
 results_*/

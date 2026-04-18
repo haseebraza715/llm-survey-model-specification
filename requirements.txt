@@ -1,36 +1,27 @@
-# Core extraction + RAG stack
-openai>=1.52.0
-instructor>=1.4.0
-llama-index-core>=0.12.0
-llama-index-vector-stores-chroma>=0.4.0
-llama-index-embeddings-huggingface>=0.5.0
-
-# Vector store and embeddings
-sentence-transformers>=3.0.0
-chromadb>=0.5.0
-diskcache>=5.6.0
-
-# Text processing
-nltk>=3.8.1
-textblob>=0.17.1
-langdetect>=1.0.9
-pdfplumber>=0.10.0
-python-docx>=1.1.0
-
-# Thematic analysis
-bertopic>=0.16.0
-keybert>=0.8.0
-
-# Data processing and validation
-pandas>=2.1.0
-numpy>=1.24.0
-pyyaml>=6.0.1
-pydantic>=2.8.0
-
-# Web interface
-streamlit>=1.35.0
-plotly>=5.17.0
-
-# Utilities
-python-dotenv>=1.0.0
-tqdm>=4.66.0
+# Pinned for reproducible demos (HF Space / CI). Upgrade deliberately.
+openai==1.59.8
+instructor==1.7.2
+llama-index-core==0.12.8
+llama-index-vector-stores-chroma==0.4.1
+llama-index-embeddings-huggingface==0.5.0
+sentence-transformers==3.3.1
+chromadb==0.5.23
+diskcache==5.6.3
+nltk==3.9.1
+textblob==0.18.0.post0
+langdetect==1.0.9
+pdfplumber==0.11.4
+python-docx==1.1.2
+bertopic==0.16.4
+keybert==0.8.5
+pandas==2.2.3
+numpy==1.26.4
+pyyaml==6.0.2
+pydantic==2.10.6
+streamlit==1.41.1
+plotly==5.24.1
+python-dotenv==1.0.1
+tqdm==4.67.1
+tiktoken==0.8.0
+pillow==10.4.0
+huggingface_hub==0.26.2
