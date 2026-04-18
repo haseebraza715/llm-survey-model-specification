@@ -1,299 +1,283 @@
-import streamlit as st
-import pandas as pd
 import json
-import yaml
-import plotly.express as px
-import plotly.graph_objects as go
-from typing import Dict, Any, List
-import sys
 import os
+import sys
+from pathlib import Path
+from typing import Any, Dict, List
 
-# Add src directory to import package modules
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from llm_survey.rag_pipeline import RAGModelExtractor
+from llm_survey.prompts.model_extraction_prompts import EXTRACTION_SYSTEM_PROMPT
+from llm_survey.rag_pipeline import RAGModelExtractor, summarize_extraction_failures
 from llm_survey.topic_analysis import TopicAnalyzer
+from llm_survey.utils.cost_estimate import estimate_extraction_run_tokens, estimate_usd
+from llm_survey.utils.export_reports import build_docx_bytes, build_json_export_bundle, build_methods_markdown
+from llm_survey.utils.preprocess import create_sample_data
 
-# Page configuration
-st.set_page_config(
-    page_title="LLM Model Specification Generator",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# Custom CSS
-st.markdown("""
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _coverage_value(report: Dict[str, Any] | None) -> float:
+    if not report:
+        return 0.0
+    return float(
+        report.get("structural_coverage_score", report.get("overall_model_completeness", 0.0)) or 0.0
+    )
+
+
+def _chunk_lookup_from_processed(chunks: List[Dict[str, Any]]) -> Dict[str, str]:
+    return {str(c.get("id", "")): str(c.get("text", "")) for c in chunks if c.get("id")}
+
+
+def _evidence_class(strength: str) -> str:
+    s = (strength or "direct").lower()
+    if s == "inferred":
+        return "evidence-inferred"
+    if s == "weak":
+        return "evidence-weak"
+    return ""
+
+
+def main() -> None:
+    st.set_page_config(
+        page_title="Qualitative model drafter",
+        page_icon="📎",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+    st.markdown(
+        """
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #1f77b4;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .section-header {
-        font-size: 1.5rem;
-        color: #2c3e50;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-    }
-    .metric-card {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #1f77b4;
-    }
+    .main-header { font-size: 2.2rem; color: #1a1a2e; text-align: center; margin-bottom: 0.25rem; }
+    .tagline { text-align: center; color: #444; font-size: 1.05rem; margin-bottom: 1rem; max-width: 52rem; margin-left: auto; margin-right: auto; }
+    .section-header { font-size: 1.35rem; color: #2c3e50; margin-top: 1.25rem; margin-bottom: 0.6rem; }
+    .evidence-inferred { border-left: 3px dashed #888; padding-left: 0.5rem; margin: 0.25rem 0; }
+    .evidence-weak { border-left: 3px solid #c0392b; padding-left: 0.5rem; margin: 0.25rem 0; }
 </style>
-""", unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
 
-def main():
-    st.markdown('<h1 class="main-header">🧠 LLM Model Specification Generator</h1>', unsafe_allow_html=True)
-    st.markdown("Generate structured scientific models from qualitative survey data using LLMs and RAG")
-    
-    # Sidebar configuration
+    root = _repo_root()
+    st.markdown('<h1 class="main-header">Qualitative model drafter</h1>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="tagline">Turn interview transcripts or survey responses into a structured first draft of a '
+        "theoretical model, with extracted findings linked to the participant text they came from — so you can "
+        "verify before you trust.</p>",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Trust docs in the repo: `docs/limitations.md` (what it gets wrong), "
+        "`docs/evaluation.md` (sample validation), `docs/structural-coverage-score.md` (heuristic score)."
+    )
+
+    demo_path = root / "static" / "demo_summary.md"
+    if demo_path.is_file():
+        with st.expander("Pre-run sample output (static)", expanded=False):
+            st.markdown(demo_path.read_text(encoding="utf-8"))
+
     with st.sidebar:
         st.header("Configuration")
-        
-        # API Key input
-        api_key = st.text_input("OpenRouter API Key", type="password", help="Enter your OpenRouter API key")
-        
-        # Model settings
+        st.caption("Bring your own OpenRouter key: stored only in this browser session — never written to disk or logs.")
+        api_key = st.text_input("OpenRouter API Key", type="password", help="Required for embedding + extraction calls.")
+
         st.subheader("Model Settings")
         llm_model = st.selectbox(
             "LLM Model",
             ["google/gemma-4-31b-it", "openai/gpt-4o-mini", "meta-llama/llama-3.3-70b-instruct"],
-            index=0
+            index=0,
         )
         temperature = st.slider("Temperature", 0.0, 1.0, 0.1, 0.1)
-        base_url = st.text_input("Base URL", value="https://openrouter.ai/api/v1", help="Base URL for OpenRouter API")
-        referer = st.text_input("HTTP Referer (optional)", value="", help="Site URL for OpenRouter rankings")
-        x_title = st.text_input("X-Title (optional)", value="", help="Site title for OpenRouter rankings")
-        extra_headers = {}
+        base_url = st.text_input("Base URL", value="https://openrouter.ai/api/v1")
+        referer = st.text_input("HTTP Referer (optional)", value="")
+        x_title = st.text_input("X-Title (optional)", value="")
+        extra_headers: Dict[str, str] = {}
         if referer:
             extra_headers["HTTP-Referer"] = referer
         if x_title:
             extra_headers["X-Title"] = x_title
-        
-        # RAG settings
-        st.subheader("RAG Settings")
-        use_rag = st.checkbox("Use RAG Enhancement", value=True)
-        use_literature = st.checkbox("Use Literature Retrieval", value=True)
-        num_context_docs = st.slider("Number of Context Documents", 1, 10, 3)
-        use_refinement = st.checkbox("Use Refinement Loop", value=True)
-        max_refinement_iterations = st.slider("Max Refinement Iterations", 1, 5, 3)
-        completeness_threshold = st.slider("Completeness Threshold", 0.5, 1.0, 0.75, 0.05)
-        
-        # Topic analysis settings
-        st.subheader("Topic Analysis Settings")
-        nr_topics = st.slider("Number of Topics", 5, 20, 10)
-        min_topic_size = st.slider("Minimum Topic Size", 2, 10, 5)
-    
-    # Main content
-    tab1, tab2, tab3, tab4 = st.tabs(["📁 Data Upload", "🔍 Model Extraction", "📊 Topic Analysis", "📈 Results"])
-    
-    # Initialize session state
-    if 'processed_data' not in st.session_state:
-        st.session_state.processed_data = None
-    if 'extractor' not in st.session_state:
-        st.session_state.extractor = None
-    if 'topic_analyzer' not in st.session_state:
-        st.session_state.topic_analyzer = None
-    if 'extraction_results' not in st.session_state:
-        st.session_state.extraction_results = None
-    if 'topic_results' not in st.session_state:
-        st.session_state.topic_results = None
-    if 'gap_report' not in st.session_state:
-        st.session_state.gap_report = None
-    if 'clarification_plan' not in st.session_state:
-        st.session_state.clarification_plan = None
-    if 'refinement_loop' not in st.session_state:
-        st.session_state.refinement_loop = None
-    
-    # Tab 1: Data Upload
-    with tab1:
-        st.markdown('<h2 class="section-header">📁 Data Upload</h2>', unsafe_allow_html=True)
-        
-        upload_option = st.radio(
-            "Choose upload method:",
-            ["Upload CSV/Text File", "Paste Text", "Use Sample Data"]
+
+        st.subheader("Retrieval & refinement")
+        use_rag = st.checkbox("Use retrieval from indexed survey text", value=True)
+        use_literature = st.checkbox("Use literature retrieval (capped at 20 papers)", value=True)
+        num_context_docs = st.slider("Survey context snippets per chunk", 1, 10, 3)
+        use_refinement = st.checkbox("Use refinement loop", value=True)
+        max_refinement_iterations = st.slider("Max refinement iterations", 1, 5, 2)
+        completeness_threshold = st.slider(
+            "Coverage threshold (stops refinement when heuristic score reaches this)",
+            0.5,
+            1.0,
+            0.75,
+            0.05,
+            help="This is the same structural coverage heuristic as in the gap report — not theoretical saturation.",
         )
-        
-        if upload_option == "Upload CSV/Text File":
-            uploaded_file = st.file_uploader(
-                "Upload your survey data",
-                type=['csv', 'txt', 'pdf', 'docx'],
-                help="Upload CSV/TXT/PDF/DOCX input"
-            )
-            
-            if uploaded_file is not None:
-                # Save uploaded file
-                file_path = f"data/raw/{uploaded_file.name}"
+
+        st.subheader("Topic analysis")
+        nr_topics = st.slider("Number of topics", 5, 20, 10)
+        min_topic_size = st.slider("Minimum topic size", 2, 10, 5)
+
+    tab1, tab2, tab3, tab4 = st.tabs(["Data", "Model extraction", "Topic analysis", "Results & export"])
+
+    if "processed_data" not in st.session_state:
+        st.session_state.processed_data = None
+    if "chunk_lookup" not in st.session_state:
+        st.session_state.chunk_lookup = {}
+    if "extractor" not in st.session_state:
+        st.session_state.extractor = None
+    if "topic_analyzer" not in st.session_state:
+        st.session_state.topic_analyzer = None
+    if "extraction_results" not in st.session_state:
+        st.session_state.extraction_results = None
+    if "extraction_failure_summary" not in st.session_state:
+        st.session_state.extraction_failure_summary = None
+    if "topic_results" not in st.session_state:
+        st.session_state.topic_results = None
+    if "gap_report" not in st.session_state:
+        st.session_state.gap_report = None
+    if "clarification_plan" not in st.session_state:
+        st.session_state.clarification_plan = None
+    if "refinement_loop" not in st.session_state:
+        st.session_state.refinement_loop = None
+    if "cost_confirmed" not in st.session_state:
+        st.session_state.cost_confirmed = False
+
+    def _make_extractor() -> RAGModelExtractor:
+        return RAGModelExtractor(
+            openai_api_key=api_key,
+            llm_model=llm_model,
+            temperature=temperature,
+            base_url=base_url,
+            extra_headers=extra_headers,
+            enable_literature_retrieval=use_literature,
+            literature_target_papers=20,
+        )
+
+    with tab1:
+        st.markdown('<h2 class="section-header">Data</h2>', unsafe_allow_html=True)
+
+        upload_option = st.radio(
+            "Source",
+            ["Upload CSV / TXT / DOCX", "Paste text", "Bundled CSV sample"],
+            horizontal=True,
+        )
+
+        if upload_option == "Upload CSV / TXT / DOCX":
+            uploaded = st.file_uploader("Upload", type=["csv", "txt", "pdf", "docx"])
+            if uploaded is not None:
+                file_path = f"data/raw/{uploaded.name}"
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                
-                st.success(f"File uploaded: {uploaded_file.name}")
-                
-                # Process data
-                if st.button("Process Data"):
-                    with st.spinner("Processing data..."):
-                        try:
-                            # Initialize extractor
-                            if api_key:
-                                st.session_state.extractor = RAGModelExtractor(
-                                    openai_api_key=api_key,
-                                    llm_model=llm_model,
-                                    temperature=temperature,
-                                    base_url=base_url,
-                                    extra_headers=extra_headers,
-                                    enable_literature_retrieval=use_literature,
-                                )
-                                
-                                # Process and store data
+                Path(file_path).write_bytes(uploaded.getbuffer())
+                st.success(f"Saved {uploaded.name}")
+                if st.button("Process uploaded file", key="proc_up"):
+                    if not api_key:
+                        st.error("Add your OpenRouter API key in the sidebar first.")
+                    else:
+                        with st.status("Processing file…", expanded=True) as st_s:
+                            try:
+                                st.session_state.extractor = _make_extractor()
+                                st_s.write("Chunking and indexing survey text…")
                                 st.session_state.processed_data = st.session_state.extractor.process_and_store_data(
-                                    file_path,
-                                    max_tokens=500,
-                                    save_processed=True
+                                    file_path, max_tokens=500, save_processed=True
                                 )
-                                
-                                st.success(f"Processed {len(st.session_state.processed_data)} text chunks")
-                                
-                                # Display sample
-                                st.subheader("Sample Processed Data")
-                                sample_df = pd.DataFrame(st.session_state.processed_data[:5])
-                                st.dataframe(sample_df[['id', 'text', 'metadata']])
-                                
-                            else:
-                                st.error("Please enter your OpenRouter API key in the sidebar")
-                                
-                        except Exception as e:
-                            st.error(f"Error processing data: {str(e)}")
-        
-        elif upload_option == "Paste Text":
-            text_input = st.text_area(
-                "Paste your qualitative data here",
-                height=200,
-                placeholder="Enter your survey responses, interview transcripts, or other qualitative data..."
-            )
-            
-            if text_input and st.button("Process Text"):
-                with st.spinner("Processing text..."):
-                    try:
-                        # Save text to file
-                        file_path = "data/raw/pasted_text.txt"
-                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                        
-                        with open(file_path, "w", encoding="utf-8") as f:
-                            f.write(text_input)
-                        
-                        # Initialize extractor
-                        if api_key:
-                            st.session_state.extractor = RAGModelExtractor(
-                                openai_api_key=api_key,
-                                llm_model=llm_model,
-                                temperature=temperature,
-                                base_url=base_url,
-                                extra_headers=extra_headers,
-                                enable_literature_retrieval=use_literature,
-                            )
-                            
-                            # Process data
+                                st.session_state.chunk_lookup = _chunk_lookup_from_processed(
+                                    st.session_state.processed_data
+                                )
+                                st.success(f"{len(st.session_state.processed_data)} chunks ready.")
+                            except (OSError, ValueError, ImportError) as err:
+                                st.error(f"Processing failed: {err}")
+
+        elif upload_option == "Paste text":
+            text_input = st.text_area("Qualitative text", height=220)
+            if text_input and st.button("Process pasted text", key="proc_paste"):
+                if not api_key:
+                    st.error("Add your OpenRouter API key in the sidebar first.")
+                else:
+                    with st.status("Processing pasted text…", expanded=True) as st_s:
+                        try:
+                            file_path = "data/raw/pasted_text.txt"
+                            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                            Path(file_path).write_text(text_input, encoding="utf-8")
+                            st.session_state.extractor = _make_extractor()
+                            st_s.write("Chunking and indexing…")
                             st.session_state.processed_data = st.session_state.extractor.process_and_store_data(
-                                file_path,
-                                max_tokens=500,
-                                save_processed=True
+                                file_path, max_tokens=500, save_processed=True
                             )
-                            
-                            st.success(f"Processed {len(st.session_state.processed_data)} text chunks")
-                            
-                        else:
-                            st.error("Please enter your OpenRouter API key in the sidebar")
-                            
-                    except Exception as e:
-                        st.error(f"Error processing text: {str(e)}")
-        
-        else:  # Sample data
-            st.info("Using sample data for demonstration")
-            
-            sample_data = [
-                "I feel overwhelmed when I have too many deadlines at work. My manager doesn't provide clear guidance, which makes it worse.",
-                "Team support really helps when I'm stressed about deadlines. Having colleagues to bounce ideas off of reduces my anxiety.",
-                "When I have a clear project timeline and regular check-ins with my supervisor, I feel much more confident and productive.",
-                "The workload is manageable when I can prioritize tasks effectively. However, unexpected urgent requests throw everything off.",
-                "I perform best when I have autonomy in my work but also know I can ask for help when needed."
-            ]
-            
-            if st.button("Load Sample Data"):
-                with st.spinner("Processing sample data..."):
-                    try:
-                        # Save sample data
-                        file_path = "data/raw/sample_data.txt"
-                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                        
-                        with open(file_path, "w", encoding="utf-8") as f:
-                            f.write("\n\n".join(sample_data))
-                        
-                        # Initialize extractor
-                        if api_key:
-                            st.session_state.extractor = RAGModelExtractor(
-                                openai_api_key=api_key,
-                                llm_model=llm_model,
-                                temperature=temperature,
-                                base_url=base_url,
-                                extra_headers=extra_headers,
-                                enable_literature_retrieval=use_literature,
-                            )
-                            
-                            # Process data
-                            st.session_state.processed_data = st.session_state.extractor.process_and_store_data(
-                                file_path,
-                                max_tokens=500,
-                                save_processed=True
-                            )
-                            
-                            st.success(f"Processed {len(st.session_state.processed_data)} text chunks")
-                            
-                        else:
-                            st.error("Please enter your OpenRouter API key in the sidebar")
-                            
-                    except Exception as e:
-                        st.error(f"Error processing sample data: {str(e)}")
-    
-    # Tab 2: Model Extraction
-    with tab2:
-        st.markdown('<h2 class="section-header">🔍 Model Extraction</h2>', unsafe_allow_html=True)
-        
-        if st.session_state.processed_data is None:
-            st.warning("Please upload and process data first")
+                            st.session_state.chunk_lookup = _chunk_lookup_from_processed(st.session_state.processed_data)
+                            st.success(f"{len(st.session_state.processed_data)} chunks ready.")
+                        except (OSError, ValueError, ImportError) as err:
+                            st.error(f"Processing failed: {err}")
         else:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.metric("Processed Chunks", len(st.session_state.processed_data))
-                st.metric("Use RAG", "Yes" if use_rag else "No")
-            
-            with col2:
-                st.metric("LLM Model", llm_model)
-                st.metric("Context Docs", num_context_docs if use_rag else 0)
-            
-            if st.button("Extract Models", type="primary"):
-                with st.spinner("Extracting models from all chunks..."):
+            st.caption("Uses `data/raw/synthetic_workplace_survey.csv` from the repository.")
+            if st.button("Load bundled workplace survey", type="primary", key="load_csv_sample"):
+                if not api_key:
+                    st.error("Add your OpenRouter API key in the sidebar first.")
+                else:
+                    with st.status("Loading sample CSV…", expanded=True) as st_s:
+                        try:
+                            sample_path = create_sample_data()
+                            st.session_state.extractor = _make_extractor()
+                            st_s.write("Chunking and indexing…")
+                            st.session_state.processed_data = st.session_state.extractor.process_and_store_data(
+                                sample_path, max_tokens=500, save_processed=True
+                            )
+                            st.session_state.chunk_lookup = _chunk_lookup_from_processed(st.session_state.processed_data)
+                            st.success(f"{len(st.session_state.processed_data)} chunks from sample survey.")
+                        except (OSError, ValueError, ImportError, FileNotFoundError) as err:
+                            st.error(f"Sample load failed: {err}")
+
+        if st.session_state.processed_data:
+            st.dataframe(pd.DataFrame(st.session_state.processed_data[:5])[["id", "text"]], use_container_width=True)
+
+    with tab2:
+        st.markdown('<h2 class="section-header">Model extraction</h2>', unsafe_allow_html=True)
+        if st.session_state.processed_data is None:
+            st.warning("Load or upload data in the first tab.")
+        elif not api_key:
+            st.error("OpenRouter API key is required before extraction.")
+        else:
+            chunks = st.session_state.processed_data
+            est_tokens = estimate_extraction_run_tokens(chunks, model=llm_model, system_prompt=EXTRACTION_SYSTEM_PROMPT)
+            est_usd = estimate_usd(est_tokens)
+            st.caption(f"Rough pre-flight estimate: ~{est_tokens:,} input-scale tokens → ~${est_usd:.2f} (± a lot; actuals depend on model pricing).")
+            if est_usd > 2.0:
+                st.session_state.cost_confirmed = st.checkbox(
+                    "This estimate is above $2. Confirm you still want to run extraction.",
+                    value=st.session_state.cost_confirmed,
+                )
+            else:
+                st.session_state.cost_confirmed = True
+
+            if st.button("Run extraction pipeline", type="primary", disabled=not st.session_state.cost_confirmed):
+                with st.status("Running extraction…", expanded=True) as status:
                     try:
-                        st.session_state.extraction_results = st.session_state.extractor.extract_models_from_all_chunks(
-                            use_rag=use_rag,
-                            save_results=True
+                        if st.session_state.extractor is None:
+                            st.session_state.extractor = _make_extractor()
+                        ex = st.session_state.extractor
+                        n = len(chunks)
+                        status.write(f"Extracting from {n} chunks (this is the slow step)…")
+                        st.session_state.extraction_results = ex.extract_models_from_all_chunks(
+                            use_rag=use_rag, save_results=True
                         )
-                        st.session_state.gap_report = st.session_state.extractor.detect_cross_chunk_gaps(
-                            st.session_state.extraction_results,
-                            save_results=True
+                        st.session_state.extraction_failure_summary = summarize_extraction_failures(
+                            st.session_state.extraction_results
                         )
-                        st.session_state.clarification_plan = st.session_state.extractor.generate_clarification_plan(
-                            st.session_state.gap_report,
-                            save_results=True
+                        status.write("Scoring structural coverage across chunks…")
+                        st.session_state.gap_report = ex.detect_cross_chunk_gaps(
+                            st.session_state.extraction_results, save_results=True
+                        )
+                        status.write("Building clarification plan…")
+                        st.session_state.clarification_plan = ex.generate_clarification_plan(
+                            st.session_state.gap_report, save_results=True
                         )
                         if use_refinement:
-                            st.session_state.refinement_loop = st.session_state.extractor.run_refinement_loop(
+                            status.write("Refinement loop (≤2 iterations by default, may stop early if coverage stalls)…")
+                            st.session_state.refinement_loop = ex.run_refinement_loop(
                                 extraction_results=st.session_state.extraction_results,
                                 gap_report=st.session_state.gap_report,
                                 clarification_plan=st.session_state.clarification_plan,
@@ -307,193 +291,132 @@ def main():
                             st.session_state.clarification_plan = st.session_state.refinement_loop["final_clarification_plan"]
                         else:
                             st.session_state.refinement_loop = None
-                        
-                        st.success(f"Extracted models from {len(st.session_state.extraction_results)} chunks")
-                        
-                        # Display results summary
-                        successful_extractions = [r for r in st.session_state.extraction_results if r['success']]
-                        failed_extractions = [r for r in st.session_state.extraction_results if not r['success']]
-                        
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("Successful", len(successful_extractions))
-                        col2.metric("Failed", len(failed_extractions))
-                        col3.metric("Success Rate", f"{len(successful_extractions)/len(st.session_state.extraction_results)*100:.1f}%")
-                        if st.session_state.gap_report:
-                            st.caption(
-                                "Cross-chunk completeness: "
-                                f"{st.session_state.gap_report.get('overall_model_completeness', 0)*100:.1f}% | "
-                                "testability: "
-                                f"{st.session_state.gap_report.get('model_testability_score', 0)*100:.1f}%"
-                            )
-                        if st.session_state.clarification_plan:
-                            st.caption(
-                                "Clarification: "
-                                f"{len(st.session_state.clarification_plan.get('questions', []))} questions | "
-                                f"{len(st.session_state.clarification_plan.get('auto_answers', []))} literature auto-answers"
-                            )
-                        if st.session_state.refinement_loop:
-                            loop_report = st.session_state.refinement_loop.get("report", {})
-                            st.caption(
-                                "Refinement: "
-                                f"{loop_report.get('iterations_completed', 0)} iterations | "
-                                f"{loop_report.get('stop_reason', 'unknown')}"
-                            )
-                        
-                    except Exception as e:
-                        st.error(f"Error extracting models: {str(e)}")
-    
-    # Tab 3: Topic Analysis
-    with tab3:
-        st.markdown('<h2 class="section-header">📊 Topic Analysis</h2>', unsafe_allow_html=True)
-        
-        if st.session_state.processed_data is None:
-            st.warning("Please upload and process data first")
-        else:
-            # Initialize topic analyzer
-            st.session_state.topic_analyzer = TopicAnalyzer(
-                nr_topics=nr_topics,
-                min_topic_size=min_topic_size
-            )
-            
-            if st.button("Perform Topic Analysis", type="primary"):
-                with st.spinner("Performing topic analysis..."):
-                    try:
-                        # Extract texts
-                        texts = [chunk['text'] for chunk in st.session_state.processed_data]
-                        
-                        # Perform analysis
-                        st.session_state.topic_results = st.session_state.topic_analyzer.analyze_topics(
-                            texts,
-                            save_results=True
-                        )
-                        
-                        st.success("Topic analysis completed!")
-                        
-                        # Display results
-                        topic_info = pd.DataFrame(st.session_state.topic_results['topic_info'])
-                        valid_topics = topic_info[topic_info['Topic'] != -1]
-                        
-                        col1, col2 = st.columns(2)
-                        col1.metric("Topics Found", len(valid_topics))
-                        col2.metric("Total Documents", st.session_state.topic_results['model_info']['total_documents'])
-                        
-                        # Topic distribution chart
-                        fig = px.bar(
-                            valid_topics,
-                            x='Topic',
-                            y='Count',
-                            title='Topic Distribution',
-                            labels={'Count': 'Number of Documents', 'Topic': 'Topic ID'}
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                        
-                    except Exception as e:
-                        st.error(f"Error performing topic analysis: {str(e)}")
-    
-    # Tab 4: Results
-    with tab4:
-        st.markdown('<h2 class="section-header">📈 Results</h2>', unsafe_allow_html=True)
-        
-        # Model extraction results
-        if st.session_state.extraction_results:
-            st.subheader("Model Extraction Results")
-            
-            # Show successful extractions
-            successful_results = [r for r in st.session_state.extraction_results if r['success']]
-            
-            if successful_results:
-                # Display first few models
-                for i, result in enumerate(successful_results[:3]):
-                    with st.expander(f"Model {i+1} (Chunk: {result['chunk_id']})"):
-                        if result['model']:
-                            st.json(result['model'])
-                        else:
-                            st.text(result['raw_response'])
-                
-                # Download results
-                if st.button("Download All Models"):
-                    # Create downloadable file
-                    models_data = {
-                        'models': successful_results,
-                        'metadata': {
-                            'total_chunks': len(st.session_state.extraction_results),
-                            'successful_extractions': len(successful_results),
-                            'success_rate': len(successful_results)/len(st.session_state.extraction_results)
-                        }
-                    }
-                    
-                    json_str = json.dumps(models_data, indent=2)
-                    st.download_button(
-                        label="Download JSON",
-                        data=json_str,
-                        file_name="extracted_models.json",
-                        mime="application/json"
-                    )
-        
-        # Topic analysis results
-        if st.session_state.topic_results:
-            st.subheader("Topic Analysis Results")
-            
-            topic_info = pd.DataFrame(st.session_state.topic_results['topic_info'])
-            valid_topics = topic_info[topic_info['Topic'] != -1]
-            
-            # Display topics
-            for _, topic in valid_topics.iterrows():
-                with st.expander(f"Topic {topic['Topic']}: {topic['Name']}"):
-                    col1, col2 = st.columns(2)
-                    col1.metric("Documents", topic['Count'])
-                    col1.metric("Percentage", f"{topic['Count']/st.session_state.topic_results['model_info']['total_documents']*100:.1f}%")
-                    
-                    # Show keywords
-                    keywords = st.session_state.topic_results['topic_keywords'].get(topic['Topic'], [])
-                    if keywords:
-                        col2.write("**Top Keywords:**")
-                        for kw, score in keywords[:5]:
-                            col2.write(f"- {kw} ({score:.3f})")
-            
-            # Download topic analysis
-            if st.button("Download Topic Analysis"):
-                yaml_str = st.session_state.topic_analyzer.export_topic_data(
-                    st.session_state.topic_results,
-                    output_format="yaml"
+                        status.update(label="Extraction finished", state="complete")
+                    except Exception as err:
+                        status.update(label="Extraction failed", state="error")
+                        st.error(str(err))
+
+            summ = st.session_state.extraction_failure_summary
+            if summ and summ.get("failure_rate", 0) > 0.2:
+                st.warning(
+                    f"More than 20% of chunks failed ({summ.get('failed_chunks')} / {summ.get('total_chunks')}). "
+                    f"Breakdown: {summ.get('by_kind')}. Interpret coverage scores cautiously."
                 )
-                st.success(f"Topic analysis exported to {yaml_str}")
+
+            if st.session_state.extraction_results:
+                ok = sum(1 for r in st.session_state.extraction_results if r.get("success"))
+                st.caption(
+                    f"Chunk outcomes: {ok}/{len(st.session_state.extraction_results)} succeeded. "
+                    f"Failure kinds: {st.session_state.extraction_failure_summary or {}}"
+                )
+
+    with tab3:
+        st.markdown('<h2 class="section-header">Topic analysis</h2>', unsafe_allow_html=True)
+        if st.session_state.processed_data is None:
+            st.warning("Load data first.")
+        else:
+            st.session_state.topic_analyzer = TopicAnalyzer(nr_topics=nr_topics, min_topic_size=min_topic_size)
+            if st.button("Run topic analysis", type="primary"):
+                with st.spinner("Topic modeling…"):
+                    try:
+                        texts = [c["text"] for c in st.session_state.processed_data]
+                        st.session_state.topic_results = st.session_state.topic_analyzer.analyze_topics(texts, save_results=True)
+                        st.success("Topic analysis done.")
+                        topic_info = pd.DataFrame(st.session_state.topic_results["topic_info"])
+                        valid = topic_info[topic_info["Topic"] != -1]
+                        fig = px.bar(valid, x="Topic", y="Count", title="Topic counts")
+                        st.plotly_chart(fig, use_container_width=True)
+                    except (RuntimeError, ValueError, ImportError) as err:
+                        st.error(f"Topic analysis failed: {err}")
+
+    with tab4:
+        st.markdown('<h2 class="section-header">Results & export</h2>', unsafe_allow_html=True)
 
         if st.session_state.gap_report:
-            st.subheader("Cross-Chunk Gap Detection")
-            report = st.session_state.gap_report
+            gr = st.session_state.gap_report
+            cov = _coverage_value(gr)
             c1, c2, c3 = st.columns(3)
-            c1.metric("Detected Gaps", len(report.get("gaps", [])))
-            c2.metric("Completeness", f"{report.get('overall_model_completeness', 0)*100:.1f}%")
-            c3.metric("Testability", f"{report.get('model_testability_score', 0)*100:.1f}%")
+            c1.metric("Structural coverage (heuristic)", f"{cov:.2f}")
+            c2.metric(
+                "Testability (heuristic)",
+                f"{float(gr.get('model_testability_score', 0) or 0):.2f}",
+            )
+            c3.metric("Open gaps", len(gr.get("gaps", [])))
+            st.caption(
+                "Structural coverage is a ratio of filled schema fields to gap penalties — "
+                "it does not measure whether the theory is correct. See docs/structural-coverage-score.md in the repo."
+            )
+            st.markdown(f"**Coverage: {cov:.2f}** — review gaps below.")
+            for g in gr.get("priority_gaps", [])[:12]:
+                st.write(f"- {g}")
 
-            priority_gaps = report.get("priority_gaps", [])
-            if priority_gaps:
-                st.write("**Priority Gaps**")
-                for gap in priority_gaps:
-                    st.write(f"- {gap}")
+        evidence_filter = st.selectbox("Filter relationships by evidence strength", ["all", "direct", "inferred", "weak"])
 
-        if st.session_state.clarification_plan:
-            st.subheader("Clarification Plan")
-            plan = st.session_state.clarification_plan
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Questions", len(plan.get("questions", [])))
-            c2.metric("Auto Answers", len(plan.get("auto_answers", [])))
-            c3.metric("Proceed w/ Literature", "Yes" if plan.get("can_proceed_with_literature") else "No")
+        if st.session_state.extraction_results:
+            st.subheader("Relationships with provenance")
+            shown = 0
+            for row in st.session_state.extraction_results:
+                if not row.get("success") or not row.get("model"):
+                    fk = row.get("failure_kind") or "unknown"
+                    with st.expander(f"Failed chunk `{row.get('chunk_id')}` ({fk})"):
+                        st.code(row.get("error") or "", language="text")
+                    continue
+                cid = str(row.get("chunk_id", ""))
+                for rel in row["model"].get("relationships") or []:
+                    if not isinstance(rel, dict):
+                        continue
+                    ev = str(rel.get("evidence_strength", "direct")).lower()
+                    if evidence_filter != "all" and ev != evidence_filter:
+                        continue
+                    shown += 1
+                    css = _evidence_class(ev)
+                    title = f"{rel.get('from_variable')} → {rel.get('to_variable')} ({ev})"
+                    with st.expander(title):
+                        if css:
+                            st.markdown(f'<div class="{css}">', unsafe_allow_html=True)
+                        st.write(rel.get("mechanism", ""))
+                        st.caption(f"Supporting quote: _{rel.get('supporting_quote', '')}_")
+                        ctx = st.session_state.chunk_lookup.get(cid, "")
+                        st.text_area(
+                            "Chunk context (source)",
+                            ctx[:8000],
+                            height=220,
+                            key=f"ctx_{cid}_{shown}_{rel.get('from_variable')}_{rel.get('to_variable')}",
+                        )
+                        if css:
+                            st.markdown("</div>", unsafe_allow_html=True)
 
-            questions = plan.get("questions", [])
-            if questions:
-                st.write("**Follow-up Questions**")
-                for q in questions[:8]:
-                    st.write(f"- {q.get('question_id')}: {q.get('question_text')} ({q.get('answer_source')}, {q.get('priority')})")
+        if st.session_state.extraction_results and st.session_state.gap_report:
+            bundle = st.session_state.extraction_results
+            lookup = st.session_state.chunk_lookup or _chunk_lookup_from_processed(st.session_state.processed_data or [])
+            summ = st.session_state.extraction_failure_summary or summarize_extraction_failures(bundle)
+            st.download_button(
+                "Download JSON (machine-readable)",
+                build_json_export_bundle(bundle, st.session_state.gap_report, lookup, summ),
+                file_name="model_draft_bundle.json",
+                mime="application/json",
+            )
+            st.download_button(
+                "Download Markdown (methods draft)",
+                build_methods_markdown(bundle, st.session_state.gap_report, lookup),
+                file_name="model_draft.md",
+                mime="text/markdown",
+            )
+            try:
+                docx_bytes = build_docx_bytes(bundle, st.session_state.gap_report, lookup)
+                st.download_button(
+                    "Download DOCX (with evidence appendix)",
+                    docx_bytes,
+                    file_name="model_draft.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            except ImportError:
+                st.caption("DOCX export needs python-docx (already listed in requirements).")
 
-        if st.session_state.refinement_loop:
-            st.subheader("Refinement Loop")
-            loop_report = st.session_state.refinement_loop.get("report", {})
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Iterations", loop_report.get("iterations_completed", 0))
-            c2.metric("Final Completeness", f"{loop_report.get('final_completeness', 0)*100:.1f}%")
-            c3.metric("Stop Reason", loop_report.get("stop_reason", "unknown"))
+        if st.session_state.topic_results:
+            st.subheader("Topic analysis")
+            st.json(st.session_state.topic_results.get("model_info", {}))
+
 
 if __name__ == "__main__":
-    main() 
+    main()
