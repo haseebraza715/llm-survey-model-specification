@@ -30,6 +30,10 @@ class CrossChunkGap(BaseModel):
 
 class CrossChunkGapReport(BaseModel):
     gaps: List[CrossChunkGap] = Field(default_factory=list)
-    overall_model_completeness: float = Field(ge=0.0, le=1.0)
+    structural_coverage_score: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Heuristic ratio of filled schema fields vs gap penalties; not theoretical validity.",
+    )
     model_testability_score: float = Field(ge=0.0, le=1.0)
     priority_gaps: List[str] = Field(default_factory=list)

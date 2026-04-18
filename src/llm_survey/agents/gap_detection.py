@@ -38,7 +38,7 @@ class CrossChunkGapDetector:
         if total_chunks == 0:
             return CrossChunkGapReport(
                 gaps=[],
-                overall_model_completeness=0.0,
+                structural_coverage_score=0.0,
                 model_testability_score=0.0,
                 priority_gaps=[],
             )
@@ -69,7 +69,7 @@ class CrossChunkGapDetector:
         gaps = [self._to_schema_gap(acc, total_chunks=total_chunks) for acc in buckets.values()]
         gaps.sort(key=lambda g: (-g.frequency, g.priority.value, g.gap_type.value, g.description))
 
-        overall_model_completeness = self._score_completeness(gaps, total_chunks=total_chunks)
+        structural_coverage_score = self._score_completeness(gaps, total_chunks=total_chunks)
         model_testability_score = self._score_testability(gaps, total_chunks=total_chunks)
 
         priority_gaps = [gap.description for gap in gaps if gap.priority == GapPriority.HIGH][:3]
@@ -82,7 +82,7 @@ class CrossChunkGapDetector:
 
         return CrossChunkGapReport(
             gaps=gaps,
-            overall_model_completeness=overall_model_completeness,
+            structural_coverage_score=structural_coverage_score,
             model_testability_score=model_testability_score,
             priority_gaps=priority_gaps,
         )
