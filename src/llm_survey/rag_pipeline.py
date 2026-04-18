@@ -3,19 +3,19 @@ from __future__ import annotations
 import json
 import os
 import re
+import urllib.error
 from collections import Counter
 from typing import Any, Dict, List
 
 import instructor
 import yaml
-from openai import OpenAI
+from openai import APIConnectionError, APIError, APITimeoutError, AuthenticationError, BadRequestError, OpenAI, RateLimitError
+from pydantic import ValidationError
 
 from llm_survey.agents import ClarificationAgent, CrossChunkGapDetector
 from llm_survey.prompts.model_extraction_prompts import (
     EXTRACTION_SYSTEM_PROMPT,
-    format_prompt,
     format_structured_extraction_prompt,
-    get_prompt_template,
 )
 from llm_survey.rag import CachedEmbedder, LiteratureStore, PubMedClient, SemanticScholarClient, SurveyStore
 from llm_survey.schemas.extraction import ChunkExtractionResult
@@ -25,6 +25,47 @@ from llm_survey.utils.preprocess import (
     save_processed_data,
     save_processed_data_for_run,
 )
+from llm_survey.utils.prompt_safety import build_refinement_user_message, build_thematic_analysis_user_message
+
+def _inject_provenance(model: Dict[str, Any], chunk_id: str) -> None:
+    if not chunk_id or not isinstance(model, dict):
+        return
+    for key in ("variables", "relationships", "moderators"):
+        for item in model.get(key) or []:
+            if isinstance(item, dict) and not item.get("source_chunk_ids"):
+                item["source_chunk_ids"] = [chunk_id]
+    for hyp in model.get("hypotheses") or []:
+        if isinstance(hyp, dict) and not hyp.get("source_chunk_ids"):
+            hyp["source_chunk_ids"] = [chunk_id]
+
+
+def _is_empty_extraction(model: ChunkExtractionResult) -> bool:
+    data = model.model_dump()
+    return not (
+        data.get("variables")
+        or data.get("relationships")
+        or data.get("hypotheses")
+        or data.get("moderators")
+    )
+
+
+def summarize_extraction_failures(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Counts for dashboard / gap-detection warnings."""
+    total = len(results)
+    by_kind: Dict[str, int] = {"api_error": 0, "parse_error": 0, "empty_extraction": 0}
+    for row in results:
+        if row.get("success"):
+            continue
+        kind = row.get("failure_kind") or "api_error"
+        if kind in by_kind:
+            by_kind[kind] += 1
+    failed = sum(1 for r in results if not r.get("success"))
+    return {
+        "total_chunks": total,
+        "failed_chunks": failed,
+        "failure_rate": (failed / total) if total else 0.0,
+        "by_kind": by_kind,
+    }
 
 
 class RAGModelExtractor:
@@ -44,7 +85,7 @@ class RAGModelExtractor:
         literature_collection: str = "literature",
         max_retries: int = 2,
         enable_literature_retrieval: bool = True,
-        literature_target_papers: int = 120,
+        literature_target_papers: int = 20,
     ):
         api_key = openai_api_key or os.getenv("OPENROUTER_API_KEY")
         if not api_key:
@@ -64,7 +105,7 @@ class RAGModelExtractor:
         self.temperature = temperature
         self.max_retries = max_retries
         self.enable_literature_retrieval = enable_literature_retrieval
-        self.literature_target_papers = max(20, literature_target_papers)
+        self.literature_target_papers = min(20, max(1, int(literature_target_papers)))
 
         self.survey_store = SurveyStore(
             persist_dir=survey_chroma_path,
@@ -189,12 +230,12 @@ class RAGModelExtractor:
         for query in queries:
             try:
                 gathered.extend(self.semantic_scholar.search_papers(query, limit=papers_per_query))
-            except Exception as err:
+            except (urllib.error.URLError, urllib.error.HTTPError, OSError, json.JSONDecodeError, ValueError) as err:
                 print(f"Semantic Scholar lookup failed for '{query}': {err}")
 
             try:
                 gathered.extend(self.pubmed.search_papers(query, limit=papers_per_query))
-            except Exception as err:
+            except (urllib.error.URLError, urllib.error.HTTPError, OSError, json.JSONDecodeError, ValueError) as err:
                 print(f"PubMed lookup failed for '{query}': {err}")
 
             if len(gathered) >= self.literature_target_papers:
@@ -227,6 +268,7 @@ class RAGModelExtractor:
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
         enriched_context: str = "",
+        chunk_id: str = "",
     ) -> Dict[str, Any]:
         """Extract one structured model from a chunk using survey + literature context."""
         survey_context = ""
@@ -248,6 +290,14 @@ class RAGModelExtractor:
             survey_context=survey_context,
             literature_context=literature_context,
         )
+        if chunk_id:
+            prompt = f"{prompt}\n\nExtraction metadata:\nchunk_id: {chunk_id}\n"
+
+        base_out: Dict[str, Any] = {
+            "survey_context": survey_context,
+            "literature_context": literature_context,
+            "failure_kind": None,
+        }
 
         try:
             response_model = self.structured_client.chat.completions.create(
@@ -260,22 +310,44 @@ class RAGModelExtractor:
                     {"role": "user", "content": prompt},
                 ],
             )
+        except (RateLimitError, APITimeoutError, APIConnectionError, AuthenticationError, BadRequestError, APIError) as err:
             return {
-                "model": response_model.model_dump(),
-                "raw_response": response_model.model_dump_json(),
-                "success": True,
-                "survey_context": survey_context,
-                "literature_context": literature_context,
-            }
-        except Exception as err:
-            return {
+                **base_out,
                 "model": None,
                 "raw_response": "",
                 "success": False,
                 "error": str(err),
-                "survey_context": survey_context,
-                "literature_context": literature_context,
+                "failure_kind": "api_error",
             }
+        except (ValidationError, json.JSONDecodeError, TypeError, ValueError) as err:
+            return {
+                **base_out,
+                "model": None,
+                "raw_response": "",
+                "success": False,
+                "error": str(err),
+                "failure_kind": "parse_error",
+            }
+
+        model_dict = response_model.model_dump()
+        _inject_provenance(model_dict, chunk_id)
+        if _is_empty_extraction(response_model):
+            return {
+                **base_out,
+                "model": model_dict,
+                "raw_response": response_model.model_dump_json(),
+                "success": False,
+                "error": "Extraction returned no variables, relationships, hypotheses, or moderators.",
+                "failure_kind": "empty_extraction",
+            }
+
+        return {
+            **base_out,
+            "model": model_dict,
+            "raw_response": response_model.model_dump_json(),
+            "success": True,
+            "failure_kind": None,
+        }
 
     def extract_models_from_all_chunks(
         self,
@@ -300,6 +372,7 @@ class RAGModelExtractor:
                 num_context_docs=num_context_docs,
                 num_literature_docs=num_literature_docs,
                 enriched_context=enriched_context,
+                chunk_id=str(chunk.get("id", "")),
             )
             result["chunk_id"] = chunk["id"]
             result["chunk_metadata"] = chunk["metadata"]
@@ -312,6 +385,8 @@ class RAGModelExtractor:
             run_path = f"outputs/extracted_models_{self.run_id}{suffix}.json"
             self._write_json(latest_path, results)
             self._write_json(run_path, results)
+            summary_path = f"outputs/extraction_failure_summary{suffix}.json"
+            self._write_json(summary_path, summarize_extraction_failures(results))
             print(f"Results saved to {latest_path}")
             print(f"Run-scoped extraction results saved to {run_path}")
 
@@ -401,7 +476,7 @@ class RAGModelExtractor:
         use_rag: bool = True,
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
-        max_iterations: int = 3,
+        max_iterations: int = 2,
         completeness_threshold: float = 0.75,
         save_results: bool = True,
     ) -> Dict[str, Any]:
@@ -415,10 +490,15 @@ class RAGModelExtractor:
         current_gap_report = gap_report
         current_clarification_plan = clarification_plan
 
+        def _coverage(rep: Dict[str, Any]) -> float:
+            return float(
+                rep.get("structural_coverage_score", rep.get("overall_model_completeness", 0.0)) or 0.0
+            )
+
         history: List[Dict[str, Any]] = [
             {
                 "iteration": 0,
-                "completeness": float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0),
+                "completeness": _coverage(current_gap_report),
                 "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
                 "gap_count": len(current_gap_report.get("gaps", [])),
                 "question_count": len(current_clarification_plan.get("questions", [])),
@@ -428,9 +508,10 @@ class RAGModelExtractor:
 
         iterations_completed = 0
         stop_reason = "max_iterations_reached"
+        prior_coverage = _coverage(current_gap_report)
 
         for iteration in range(1, max_iterations + 1):
-            completeness = float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0)
+            completeness = _coverage(current_gap_report)
             if completeness >= completeness_threshold:
                 stop_reason = "threshold_reached"
                 break
@@ -462,11 +543,29 @@ class RAGModelExtractor:
                 output_suffix=f"iter_{iteration}",
             )
 
+            new_coverage = _coverage(current_gap_report)
+            if new_coverage - prior_coverage < 0.05:
+                stop_reason = "convergence_no_coverage_gain"
+                iterations_completed = iteration
+                history.append(
+                    {
+                        "iteration": iteration,
+                        "completeness": new_coverage,
+                        "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
+                        "gap_count": len(current_gap_report.get("gaps", [])),
+                        "question_count": len(current_clarification_plan.get("questions", [])),
+                        "auto_answer_count": len(current_clarification_plan.get("auto_answers", [])),
+                    }
+                )
+                prior_coverage = new_coverage
+                break
+
+            prior_coverage = new_coverage
             iterations_completed = iteration
             history.append(
                 {
                     "iteration": iteration,
-                    "completeness": float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0),
+                    "completeness": new_coverage,
                     "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
                     "gap_count": len(current_gap_report.get("gaps", [])),
                     "question_count": len(current_clarification_plan.get("questions", [])),
@@ -475,7 +574,7 @@ class RAGModelExtractor:
             )
 
         if stop_reason == "max_iterations_reached":
-            final_completeness = float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0)
+            final_completeness = _coverage(current_gap_report)
             if final_completeness >= completeness_threshold:
                 stop_reason = "threshold_reached"
 
@@ -485,7 +584,7 @@ class RAGModelExtractor:
             "completeness_threshold": completeness_threshold,
             "stop_reason": stop_reason,
             "history": history,
-            "final_completeness": float(current_gap_report.get("overall_model_completeness", 0.0) or 0.0),
+            "final_completeness": _coverage(current_gap_report),
             "final_testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
             "final_gap_count": len(current_gap_report.get("gaps", [])),
         }
@@ -540,7 +639,7 @@ class RAGModelExtractor:
                 ],
             )
             raw_response = self._safe_completion_text(completion)
-        except Exception as err:
+        except (RateLimitError, APITimeoutError, APIConnectionError, AuthenticationError, BadRequestError, APIError) as err:
             return {"payload": None, "raw_response": "", "success": False, "error": str(err)}
         try:
             return {"payload": yaml.safe_load(raw_response), "raw_response": raw_response, "success": True}
@@ -555,10 +654,7 @@ class RAGModelExtractor:
         """Perform thematic analysis across multiple text excerpts."""
         combined_text = "\n\n---\n\n".join(text_excerpts)
 
-        prompt = format_prompt(
-            get_prompt_template("thematic"),
-            text_excerpts=combined_text,
-        )
+        prompt = build_thematic_analysis_user_message(combined_text)
 
         response = self._call_yaml(prompt)
         result = {
@@ -589,11 +685,7 @@ class RAGModelExtractor:
         """Refine and validate a model specification."""
         model_yaml = yaml.dump(original_model, default_flow_style=False)
 
-        prompt = format_prompt(
-            get_prompt_template("refinement"),
-            original_model=model_yaml,
-            context=context,
-        )
+        prompt = build_refinement_user_message(model_yaml, context)
 
         response = self._call_yaml(prompt)
         result = {
