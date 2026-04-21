@@ -6,6 +6,8 @@ import json
 from io import BytesIO
 from typing import Any, Dict, List, Mapping, Sequence
 
+import yaml
+
 from llm_survey.prompts.model_extraction_prompts import EXTRACTION_SYSTEM_PROMPT
 
 
@@ -15,6 +17,25 @@ def _coverage(gap_report: Mapping[str, Any] | None) -> float:
     return float(
         gap_report.get("structural_coverage_score", gap_report.get("overall_model_completeness", 0.0)) or 0.0
     )
+
+
+def _plain(payload: Any) -> Any:
+    if hasattr(payload, "model_dump"):
+        return payload.model_dump()
+    return payload
+
+
+def _validation_map(validations: Any) -> Dict[str, Dict[str, Any]]:
+    plain = _plain(validations) or {}
+    rows = plain.get("validations", []) if isinstance(plain, dict) else []
+    output: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        key = str(row.get("hypothesis_id", "")).strip()
+        if key:
+            output[key] = row
+    return output
 
 
 def build_methods_markdown(
@@ -168,3 +189,220 @@ def build_json_export_bundle(
         indent=2,
         ensure_ascii=False,
     )
+
+
+def build_final_model_spec_yaml(
+    consolidated_model: Mapping[str, Any] | Any,
+    validations: Mapping[str, Any] | Any = None,
+    conflict_report: Mapping[str, Any] | Any = None,
+    metadata: Mapping[str, Any] | None = None,
+) -> str:
+    model = _plain(consolidated_model) or {}
+    validation_by_id = _validation_map(validations)
+    conflicts = (_plain(conflict_report) or {}).get("contradictions", [])
+    meta = dict(metadata or {})
+
+    payload = {
+        "model": {
+            "generated_at": meta.get("generated_at", ""),
+            "pipeline_version": meta.get("pipeline_version", "1.0.0"),
+            "total_chunks": meta.get("total_chunks", 0),
+            "iterations_completed": meta.get("iterations_completed", 0),
+            "overall_confidence": model.get("overall_confidence", 0.0),
+            "model_summary": model.get("model_summary", ""),
+        },
+        "variables": [
+            {
+                "name": row.get("name"),
+                "type": row.get("type"),
+                "definition": row.get("definition"),
+                "aliases": row.get("aliases", []),
+                "chunk_frequency": row.get("chunk_frequency", 0),
+                "confidence": row.get("confidence", 0.0),
+            }
+            for row in model.get("variables", [])
+        ],
+        "relationships": [
+            {
+                "from": row.get("from_variable"),
+                "to": row.get("to_variable"),
+                "direction": row.get("direction"),
+                "mechanism": row.get("mechanism"),
+                "confidence": row.get("confidence", 0.0),
+                "support_count": row.get("support_count", 0),
+                "support_fraction": row.get("support_fraction", 0.0),
+            }
+            for row in model.get("relationships", [])
+        ],
+        "hypotheses": [],
+        "moderators": model.get("moderators", []),
+        "contradictions": conflicts,
+        "research_questions": model.get("research_questions", []),
+    }
+
+    for row in model.get("hypotheses", []):
+        validation = validation_by_id.get(str(row.get("id", "")), {})
+        payload["hypotheses"].append(
+            {
+                "id": row.get("id"),
+                "statement": row.get("statement"),
+                "confidence": row.get("confidence", 0.0),
+                "support_count": row.get("support_count", 0),
+                "support_fraction": row.get("support_fraction", 0.0),
+                "consensus_strength": validation.get("consensus_strength", row.get("consensus_strength", "weak")),
+                "literature_support_score": validation.get("literature_support_score", row.get("literature_support_score", 0.0)),
+                "novelty_flag": validation.get("novelty_flag", row.get("novelty_flag", False)),
+                "supporting_papers": validation.get("supporting_papers", []),
+                "contradicting_papers": validation.get("contradicting_papers", []),
+                "researcher_notes": row.get("researcher_notes", ""),
+            }
+        )
+
+    return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
+
+
+def build_mermaid_diagram(consolidated_model: Mapping[str, Any] | Any) -> str:
+    model = _plain(consolidated_model) or {}
+    lines = ["graph LR"]
+    for row in model.get("relationships", []):
+        from_name = str(row.get("from_variable", "")).replace(" ", "")
+        to_name = str(row.get("to_variable", "")).replace(" ", "")
+        if not from_name or not to_name:
+            continue
+        label = f"{row.get('direction', 'unclear')}, conf:{float(row.get('confidence', 0.0)):.2f}"
+        lines.append(f'    {from_name} -->|"{label}"| {to_name}')
+    return "\n".join(lines)
+
+
+def build_causal_graph_html(
+    consolidated_model: Mapping[str, Any] | Any,
+    validations: Mapping[str, Any] | Any = None,
+    conflict_report: Mapping[str, Any] | Any = None,
+) -> str:
+    model = _plain(consolidated_model) or {}
+    validation_by_id = _validation_map(validations)
+    conflicts = (_plain(conflict_report) or {}).get("contradictions", [])
+    mermaid = build_mermaid_diagram(model)
+
+    relationship_cards: List[str] = []
+    for row in model.get("relationships", []):
+        quotes = "".join(f"<li>{quote}</li>" for quote in row.get("supporting_quotes", [])[:4])
+        relationship_cards.append(
+            "<details>"
+            f"<summary><strong>{row.get('from_variable')}</strong> → <strong>{row.get('to_variable')}</strong> "
+            f"({row.get('direction')}, conf {float(row.get('confidence', 0.0)):.2f})</summary>"
+            f"<p>{row.get('mechanism', '')}</p>"
+            f"<p>Support: {row.get('support_count', 0)} chunks ({float(row.get('support_fraction', 0.0)):.2f})</p>"
+            f"<ul>{quotes}</ul>"
+            "</details>"
+        )
+
+    hypothesis_cards: List[str] = []
+    for row in model.get("hypotheses", []):
+        validation = validation_by_id.get(str(row.get("id", "")), {})
+        hypothesis_cards.append(
+            "<details>"
+            f"<summary>{row.get('id')}: {row.get('statement')}</summary>"
+            f"<p>Confidence: {float(row.get('confidence', 0.0)):.2f}</p>"
+            f"<p>Literature: {validation.get('consensus_strength', row.get('consensus_strength', 'weak'))} "
+            f"(score {float(validation.get('literature_support_score', row.get('literature_support_score', 0.0))):.2f})</p>"
+            "</details>"
+        )
+
+    conflict_cards = "".join(
+        "<li>"
+        f"{row.get('relationship')}: {row.get('resolution_status')} — {row.get('resolution_explanation')}"
+        "</li>"
+        for row in conflicts
+    ) or "<li>No contradictions detected.</li>"
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Consolidated Causal Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 24px; color: #18212b; line-height: 1.5; }}
+    .grid {{ display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }}
+    .panel {{ border: 1px solid #d4dce6; border-radius: 12px; padding: 16px; background: #fafcfe; }}
+    details {{ margin: 0 0 12px 0; }}
+    summary {{ cursor: pointer; }}
+  </style>
+</head>
+<body>
+  <h1>Consolidated Causal Graph</h1>
+  <p>{model.get("model_summary", "")}</p>
+  <div class="grid">
+    <section class="panel">
+      <div class="mermaid">
+{mermaid}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Contradictions</h2>
+      <ul>{conflict_cards}</ul>
+    </section>
+  </div>
+  <section class="panel">
+    <h2>Relationships</h2>
+    {''.join(relationship_cards)}
+  </section>
+  <section class="panel">
+    <h2>Hypotheses</h2>
+    {''.join(hypothesis_cards)}
+  </section>
+  <script>mermaid.initialize({{ startOnLoad: true }});</script>
+</body>
+</html>"""
+
+
+def build_evidence_report_markdown(
+    consolidated_model: Mapping[str, Any] | Any,
+    validations: Mapping[str, Any] | Any = None,
+    conflict_report: Mapping[str, Any] | Any = None,
+) -> str:
+    model = _plain(consolidated_model) or {}
+    validation_by_id = _validation_map(validations)
+    conflicts = (_plain(conflict_report) or {}).get("contradictions", [])
+    lines: List[str] = [
+        "# Evidence report",
+        "",
+        "## Model summary",
+        model.get("model_summary", "_No summary available._"),
+        "",
+        "## Hypotheses",
+        "",
+    ]
+
+    for row in model.get("hypotheses", []):
+        validation = validation_by_id.get(str(row.get("id", "")), {})
+        lines.append(f"### {row.get('id')}: {row.get('statement')}")
+        lines.append(f"- Data confidence: **{float(row.get('confidence', 0.0)):.2f}**")
+        lines.append(
+            f"- Literature consensus: **{validation.get('consensus_strength', row.get('consensus_strength', 'weak'))}** "
+            f"(score {float(validation.get('literature_support_score', row.get('literature_support_score', 0.0))):.2f})"
+        )
+        lines.append(f"- Novelty flag: **{bool(validation.get('novelty_flag', row.get('novelty_flag', False)))}**")
+        for quote in row.get("supporting_quotes", [])[:5]:
+            lines.append(f"- Supporting quote: _{quote}_")
+        for paper in validation.get("supporting_papers", [])[:3]:
+            lines.append(
+                f"- Supporting paper: **{paper.get('title')}** ({paper.get('year', 'n.d.')}) — {paper.get('relevant_excerpt', '')}"
+            )
+        for paper in validation.get("contradicting_papers", [])[:3]:
+            lines.append(
+                f"- Contradicting paper: **{paper.get('title')}** ({paper.get('year', 'n.d.')}) — {paper.get('relevant_excerpt', '')}"
+            )
+        if row.get("researcher_notes"):
+            lines.append(f"- Researcher notes: {row.get('researcher_notes')}")
+        lines.append("")
+
+    lines.extend(["## Contradictions", ""])
+    if conflicts:
+        for row in conflicts:
+            lines.append(f"- **{row.get('relationship')}**: {row.get('resolution_status')} — {row.get('resolution_explanation')}")
+    else:
+        lines.append("- No contradictions detected.")
+    lines.append("")
+    return "\n".join(lines)
