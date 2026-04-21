@@ -73,7 +73,7 @@ python scripts/smoke_e2e.py
 ## Dashboard
 
 ```bash
-python -m streamlit run ui/dashboard.py
+python -m streamlit run app.py
 ```
 
 ## Expected Outputs
@@ -88,6 +88,16 @@ python -m streamlit run ui/dashboard.py
 - `outputs/clarification_plan_<run_id>.json`
 - `outputs/refinement_loop_report.json`
 - `outputs/refinement_loop_report_<run_id>.json`
+- `outputs/consolidated_model.json`
+- `outputs/consolidated_model_<run_id>.json`
+- `outputs/conflict_report.json`
+- `outputs/conflict_report_<run_id>.json`
+- `outputs/literature_validation_report.json`
+- `outputs/literature_validation_report_<run_id>.json`
+- `outputs/final_model_spec.yaml`
+- `outputs/causal_graph.mmd`
+- `outputs/causal_graph.html`
+- `outputs/evidence_report.md`
 - `outputs/comprehensive_report.json`
 - `outputs/topic_analysis.json` (if topic analysis enabled)
 - `outputs/topic_summary.md` (if topic analysis enabled)
