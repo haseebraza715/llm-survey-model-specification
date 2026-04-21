@@ -130,6 +130,13 @@ Main class: `TopicAnalyzer`
 - `outputs/clarification_plan_<run_id>.json` run-scoped phase-5 plan
 - `outputs/refinement_loop_report.json` latest phase-6 loop report
 - `outputs/refinement_loop_report_<run_id>.json` run-scoped phase-6 loop report
+- `outputs/consolidated_model.json` latest merged model
+- `outputs/conflict_report.json` latest contradiction analysis
+- `outputs/literature_validation_report.json` latest hypothesis-vs-literature report
+- `outputs/final_model_spec.yaml` YAML spec export
+- `outputs/causal_graph.mmd` Mermaid graph export
+- `outputs/causal_graph.html` reviewable graph HTML
+- `outputs/evidence_report.md` Markdown evidence report
 - `outputs/comprehensive_report.json` run-level summary
 - `outputs/topic_analysis.json` topic payload
 - `outputs/plots/` generated visualizations
