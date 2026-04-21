@@ -166,9 +166,30 @@ def run_complete_pipeline(
             print("Generated topic summary")
         else:
             print("Topic analysis skipped due to dependency issues")
-    
-    # Step 7: Generate comprehensive report
-    print("\nStep 7: Generating comprehensive report...")
+
+    # Step 7: Consolidation, conflicts, validation, exports
+    print("\nStep 7: Consolidating model and building final outputs...")
+    finalization = extractor.finalize_model_outputs(
+        extraction_results=extraction_results,
+        gap_report=gap_report,
+        clarification_plan=clarification_plan,
+        refinement_report=refinement_loop["report"] if refinement_loop else None,
+        output_dir=output_dir,
+        save_results=True,
+    )
+    consolidated_model = finalization["consolidated_model"]
+    conflict_report = finalization["conflict_report"]
+    literature_validation = finalization["literature_validation"]
+    final_exports = finalization["final_exports"]
+    print(
+        "Finalization complete: "
+        f"{len(consolidated_model.get('variables', []))} variables, "
+        f"{len(consolidated_model.get('relationships', []))} relationships, "
+        f"{conflict_report.get('unresolved_count', 0)} unresolved contradictions"
+    )
+
+    # Step 8: Generate comprehensive report
+    print("\nStep 8: Generating comprehensive report...")
     
     report = {
         'pipeline_info': {
@@ -190,7 +211,11 @@ def run_complete_pipeline(
         'gap_detection': gap_report,
         'clarification_plan': clarification_plan,
         'refinement_loop': refinement_loop["report"] if refinement_loop else None,
-        'topic_analysis': topic_results if topic_results else None
+        'topic_analysis': topic_results if topic_results else None,
+        'consolidated_model': consolidated_model,
+        'conflict_report': conflict_report,
+        'literature_validation': literature_validation,
+        'final_exports': final_exports.get("paths", {}),
     }
     
     # Save comprehensive report
@@ -214,6 +239,10 @@ def run_complete_pipeline(
     print(f"Structural coverage (heuristic): {float(cov)*100:.1f}%")
     print(f"Model testability: {gap_report.get('model_testability_score', 0)*100:.1f}%")
     print(f"Clarification questions: {len(clarification_plan.get('questions', []))}")
+    print(f"Consolidated variables: {len(consolidated_model.get('variables', []))}")
+    print(f"Consolidated relationships: {len(consolidated_model.get('relationships', []))}")
+    print(f"Unresolved contradictions: {conflict_report.get('unresolved_count', 0)}")
+    print(f"Novel hypotheses: {literature_validation.get('novelty_count', 0)}")
     if refinement_loop:
         print(
             f"Refinement iterations: {refinement_loop['report'].get('iterations_completed', 0)} "
