@@ -5,6 +5,7 @@ import os
 import re
 import urllib.error
 from collections import Counter
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import instructor
@@ -12,13 +13,26 @@ import yaml
 from openai import APIConnectionError, APIError, APITimeoutError, AuthenticationError, BadRequestError, OpenAI, RateLimitError
 from pydantic import ValidationError
 
-from llm_survey.agents import ClarificationAgent, CrossChunkGapDetector
+from llm_survey.agents import (
+    ClarificationAgent,
+    ConflictDetector,
+    CrossChunkGapDetector,
+    LiteratureValidator,
+    ModelConsolidator,
+)
 from llm_survey.prompts.model_extraction_prompts import (
     EXTRACTION_SYSTEM_PROMPT,
     format_structured_extraction_prompt,
 )
 from llm_survey.rag import CachedEmbedder, LiteratureStore, PubMedClient, SemanticScholarClient, SurveyStore
+from llm_survey.schemas.consolidation import ConsolidatedModel, ScoredHypothesis
 from llm_survey.schemas.extraction import ChunkExtractionResult
+from llm_survey.utils.export_reports import (
+    build_causal_graph_html,
+    build_evidence_report_markdown,
+    build_final_model_spec_yaml,
+    build_mermaid_diagram,
+)
 from llm_survey.utils.preprocess import (
     generate_run_id,
     process_survey_data,
@@ -122,6 +136,9 @@ class RAGModelExtractor:
         self.pubmed = PubMedClient()
         self.gap_detector = CrossChunkGapDetector()
         self.clarification_agent = ClarificationAgent()
+        self.consolidator = ModelConsolidator()
+        self.conflict_detector = ConflictDetector()
+        self.literature_validator = LiteratureValidator()
 
         self.processed_chunks: List[Dict[str, Any]] = []
         self.run_id: str = generate_run_id("pipeline")
@@ -131,6 +148,12 @@ class RAGModelExtractor:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
+
+    @staticmethod
+    def _write_text(path: str, payload: str) -> None:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(payload)
 
     def process_and_store_data(
         self,
@@ -438,6 +461,196 @@ class RAGModelExtractor:
             print(f"Run-scoped clarification plan saved to {run_path}")
 
         return plan
+
+    def consolidate_model(
+        self,
+        extraction_results: List[Dict[str, Any]],
+        gap_report: Dict[str, Any] | None = None,
+        clarification_plan: Dict[str, Any] | None = None,
+        save_results: bool = True,
+    ) -> Dict[str, Any]:
+        """Merge chunk-level extractions into one consolidated model."""
+        model = self.consolidator.consolidate(
+            extraction_results=extraction_results,
+            gap_report=gap_report or {},
+            clarification_plan=clarification_plan or {},
+        )
+        payload = model.model_dump()
+        if save_results:
+            self._write_json("outputs/consolidated_model.json", payload)
+            self._write_json(f"outputs/consolidated_model_{self.run_id}.json", payload)
+        return payload
+
+    def detect_conflicts(
+        self,
+        consolidated_model: Dict[str, Any],
+        extraction_results: List[Dict[str, Any]],
+        save_results: bool = True,
+    ) -> Dict[str, Any]:
+        """Flag contradictions in the consolidated model."""
+        report = self.conflict_detector.detect(
+            consolidated_model=ConsolidatedModel.model_validate(consolidated_model),
+            extraction_results=extraction_results,
+            literature_store=self.literature_store if self.enable_literature_retrieval else None,
+        )
+        payload = report.model_dump()
+        if save_results:
+            self._write_json("outputs/conflict_report.json", payload)
+            self._write_json(f"outputs/conflict_report_{self.run_id}.json", payload)
+        return payload
+
+    def validate_hypotheses(
+        self,
+        consolidated_model: Dict[str, Any],
+        save_results: bool = True,
+    ) -> Dict[str, Any]:
+        """Validate consolidated hypotheses against the literature store."""
+        report = self.literature_validator.validate(
+            hypotheses=[ScoredHypothesis.model_validate(row) for row in consolidated_model.get("hypotheses", [])],
+            literature_store=self.literature_store if self.enable_literature_retrieval else None,
+        )
+        payload = report.model_dump()
+        if save_results:
+            self._write_json("outputs/literature_validation_report.json", payload)
+            self._write_json(f"outputs/literature_validation_report_{self.run_id}.json", payload)
+        return payload
+
+    @staticmethod
+    def _merge_validation_into_model(
+        consolidated_model: Dict[str, Any],
+        conflict_report: Dict[str, Any] | None,
+        validation_report: Dict[str, Any] | None,
+    ) -> Dict[str, Any]:
+        merged = json.loads(json.dumps(consolidated_model))
+        merged["contradictions"] = list((conflict_report or {}).get("contradictions", []))
+        validation_map = {
+            str(row.get("hypothesis_id", "")): row
+            for row in (validation_report or {}).get("validations", [])
+            if isinstance(row, dict)
+        }
+        for hypothesis in merged.get("hypotheses", []):
+            validation = validation_map.get(str(hypothesis.get("id", "")), {})
+            if validation:
+                hypothesis["literature_support_score"] = validation.get("literature_support_score", 0.0)
+                hypothesis["consensus_strength"] = validation.get("consensus_strength", hypothesis.get("consensus_strength", "weak"))
+                hypothesis["novelty_flag"] = validation.get("novelty_flag", False)
+        return merged
+
+    def export_final_outputs(
+        self,
+        consolidated_model: Dict[str, Any],
+        conflict_report: Dict[str, Any] | None = None,
+        validation_report: Dict[str, Any] | None = None,
+        total_chunks: int = 0,
+        iterations_completed: int = 0,
+        output_dir: str = "outputs",
+        save_results: bool = True,
+    ) -> Dict[str, Any]:
+        """Build the final model-spec artifacts for review and sharing."""
+        metadata = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "pipeline_version": "1.0.0",
+            "total_chunks": total_chunks,
+            "iterations_completed": iterations_completed,
+        }
+        yaml_text = build_final_model_spec_yaml(
+            consolidated_model=consolidated_model,
+            validations=validation_report,
+            conflict_report=conflict_report,
+            metadata=metadata,
+        )
+        mermaid_text = build_mermaid_diagram(consolidated_model)
+        html_text = build_causal_graph_html(
+            consolidated_model=consolidated_model,
+            validations=validation_report,
+            conflict_report=conflict_report,
+        )
+        evidence_md = build_evidence_report_markdown(
+            consolidated_model=consolidated_model,
+            validations=validation_report,
+            conflict_report=conflict_report,
+        )
+
+        output = {
+            "model_spec_yaml": yaml_text,
+            "causal_graph_mermaid": mermaid_text,
+            "causal_graph_html": html_text,
+            "evidence_report_markdown": evidence_md,
+            "paths": {},
+        }
+        if save_results:
+            yaml_path = os.path.join(output_dir, "final_model_spec.yaml")
+            mermaid_path = os.path.join(output_dir, "causal_graph.mmd")
+            html_path = os.path.join(output_dir, "causal_graph.html")
+            evidence_path = os.path.join(output_dir, "evidence_report.md")
+            self._write_text(yaml_path, yaml_text)
+            self._write_text(mermaid_path, mermaid_text)
+            self._write_text(html_path, html_text)
+            self._write_text(evidence_path, evidence_md)
+            self._write_text(os.path.join(output_dir, f"final_model_spec_{self.run_id}.yaml"), yaml_text)
+            self._write_text(os.path.join(output_dir, f"causal_graph_{self.run_id}.mmd"), mermaid_text)
+            self._write_text(os.path.join(output_dir, f"causal_graph_{self.run_id}.html"), html_text)
+            self._write_text(os.path.join(output_dir, f"evidence_report_{self.run_id}.md"), evidence_md)
+            output["paths"] = {
+                "yaml": yaml_path,
+                "mermaid": mermaid_path,
+                "html": html_path,
+                "evidence_markdown": evidence_path,
+            }
+        return output
+
+    def finalize_model_outputs(
+        self,
+        extraction_results: List[Dict[str, Any]],
+        gap_report: Dict[str, Any],
+        clarification_plan: Dict[str, Any],
+        refinement_report: Dict[str, Any] | None = None,
+        output_dir: str = "outputs",
+        save_results: bool = True,
+    ) -> Dict[str, Any]:
+        """Run consolidation, conflict detection, literature validation, and final exports."""
+        consolidated_model = self.consolidate_model(
+            extraction_results=extraction_results,
+            gap_report=gap_report,
+            clarification_plan=clarification_plan,
+            save_results=False,
+        )
+        conflict_report = self.detect_conflicts(
+            consolidated_model=consolidated_model,
+            extraction_results=extraction_results,
+            save_results=False,
+        )
+        validation_report = self.validate_hypotheses(
+            consolidated_model=consolidated_model,
+            save_results=False,
+        )
+        merged_model = self._merge_validation_into_model(
+            consolidated_model=consolidated_model,
+            conflict_report=conflict_report,
+            validation_report=validation_report,
+        )
+        if save_results:
+            self._write_json("outputs/consolidated_model.json", merged_model)
+            self._write_json(f"outputs/consolidated_model_{self.run_id}.json", merged_model)
+            self._write_json("outputs/conflict_report.json", conflict_report)
+            self._write_json(f"outputs/conflict_report_{self.run_id}.json", conflict_report)
+            self._write_json("outputs/literature_validation_report.json", validation_report)
+            self._write_json(f"outputs/literature_validation_report_{self.run_id}.json", validation_report)
+        exports = self.export_final_outputs(
+            consolidated_model=merged_model,
+            conflict_report=conflict_report,
+            validation_report=validation_report,
+            total_chunks=len(self.processed_chunks),
+            iterations_completed=int((refinement_report or {}).get("iterations_completed", 0)),
+            output_dir=output_dir,
+            save_results=save_results,
+        )
+        return {
+            "consolidated_model": merged_model,
+            "conflict_report": conflict_report,
+            "literature_validation": validation_report,
+            "final_exports": exports,
+        }
 
     def _build_enriched_context(self, clarification_plan: Dict[str, Any], gap_report: Dict[str, Any]) -> str:
         """Build enriched context for refinement iterations."""
