@@ -36,6 +36,11 @@ Core capabilities:
 - cross-chunk gap detection with a **structural coverage** heuristic and a separate testability heuristic (neither is “truth”)
 - clarification planning with question routing (`researcher`/`literature`/`either`) and literature auto-answers
 - iterative refinement loop (default **2** iterations, with early stop if coverage gains stall)
+- deterministic consolidation of chunk-level findings into one reviewable model
+- contradiction detection with subgroup-aware resolution attempts
+- per-hypothesis literature validation with support, contestation, and novelty flags
+- human-review UI for editing consolidated variables, relationships, and hypotheses before export
+- final exports for YAML model specs, Mermaid diagrams, causal-graph HTML, Markdown evidence reports, JSON, and DOCX appendix
 - topic modeling and keyword analysis for cross-response patterns
 
 Main entry points:
