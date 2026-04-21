@@ -195,6 +195,21 @@ def test_refinement_loop_runs_with_pipeline_outputs(tmp_path: Path, monkeypatch:
     assert "final_gap_report" in out
     assert "structural_coverage_score" in out["final_gap_report"]
 
+    finalization = ex.finalize_model_outputs(
+        extraction_results=out["final_extraction_results"],
+        gap_report=out["final_gap_report"],
+        clarification_plan=out["final_clarification_plan"],
+        refinement_report=out["report"],
+        save_results=False,
+    )
+    assert "consolidated_model" in finalization
+    assert "conflict_report" in finalization
+    assert "literature_validation" in finalization
+    assert "final_exports" in finalization
+    assert finalization["consolidated_model"]["relationships"]
+    assert "graph LR" in finalization["final_exports"]["causal_graph_mermaid"]
+    assert "Evidence report" in finalization["final_exports"]["evidence_report_markdown"]
+
 
 def test_bundled_sample_csv_path_exists() -> None:
     path = create_sample_data()
