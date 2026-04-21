@@ -128,6 +128,18 @@ def parse_csv(file_path: str) -> List[Dict[str, Any]]:
         if pd.isna(timestamp):
             timestamp = None
 
+        extra_metadata: Dict[str, Any] = {}
+        for column in df.columns:
+            if column in {"text", "response", "speaker_id", "timestamp"}:
+                continue
+            value = row.get(column)
+            if pd.isna(value):
+                continue
+            if isinstance(value, (str, int, float, bool)):
+                extra_metadata[column] = value
+            else:
+                extra_metadata[column] = str(value)
+
         records.append(
             {
                 "text": text,
@@ -135,6 +147,7 @@ def parse_csv(file_path: str) -> List[Dict[str, Any]]:
                 "timestamp": None if timestamp is None else str(timestamp),
                 "original_index": int(idx),
                 "source_type": "csv",
+                "extra_metadata": extra_metadata,
             }
         )
 
@@ -311,9 +324,11 @@ def process_survey_data(file_path: str, max_tokens: int = 500) -> List[Dict[str,
         speaker_id = record.get("speaker_id")
         timestamp = record.get("timestamp")
         original_index = int(record.get("original_index", 0))
+        extra_metadata = dict(record.get("extra_metadata") or {})
 
         for chunk_idx, chunk in enumerate(chunks):
             metadata = extract_metadata(chunk, speaker_id=speaker_id, timestamp=timestamp)
+            metadata.update(extra_metadata)
             chunk_id = f"{speaker_id}_chunk_{chunk_idx}" if speaker_id else f"chunk_{original_index}_{chunk_idx}"
             processed_chunks.append(
                 {
