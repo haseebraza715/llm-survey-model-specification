@@ -93,6 +93,24 @@ def main() -> None:
     )
 
     t0 = time.time()
+    finalization = extractor.finalize_model_outputs(
+        extraction_results=refinement_loop.get("final_extraction_results", extraction_results),
+        gap_report=refinement_loop.get("final_gap_report", gap_report),
+        clarification_plan=refinement_loop.get("final_clarification_plan", clarification_plan),
+        refinement_report=loop_report,
+        save_results=True,
+    )
+    checkpoints.append(
+        {
+            "step": "finalization",
+            "seconds": round(time.time() - t0, 2),
+            "variables": len(finalization["consolidated_model"].get("variables", [])),
+            "relationships": len(finalization["consolidated_model"].get("relationships", [])),
+            "unresolved_conflicts": finalization["conflict_report"].get("unresolved_count", 0),
+        }
+    )
+
+    t0 = time.time()
     topic_analyzer = TopicAnalyzer(embedding_model=extractor.embedding_model_name, nr_topics=10, min_topic_size=2)
     texts = [c["text"] for c in chunks]
     topic_results = topic_analyzer.analyze_topics(texts, save_results=True)
