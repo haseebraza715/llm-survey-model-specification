@@ -1,7 +1,8 @@
 # Reproducing this work
 
-This file documents how to reproduce every number in `docs/evaluation_metrics.json`
-and the variants in `outputs/ablation/ablation_results.json`.
+This file documents how to reproduce the deterministic fixture numbers in
+`docs/evaluation_metrics.json`. No versioned ablation artifact is currently
+committed; live ablation results are therefore **UNVERIFIED**.
 
 ## Hardware / runtime expectations
 
@@ -9,8 +10,8 @@ and the variants in `outputs/ablation/ablation_results.json`.
 |---|---|---|
 | `make install` | ~2 min (cold) | $0 |
 | `make eval` (offline; no LLM calls) | < 5 sec | $0 |
-| `make ablation` (3 variants, default model) | ~3–6 min | < $0.05 |
-| Full pipeline + topic analysis | ~5–8 min | < $0.10 |
+| `make ablation` (3 variants, default model) | ~3–6 min (estimate) | < $0.05 (estimate) |
+| Full pipeline + topic analysis | ~5–8 min (estimate) | < $0.10 (estimate) |
 
 The offline `make eval` target works without an API key — it recomputes
 metrics + bootstrap CIs over the bundled fixture extractions in
@@ -20,8 +21,8 @@ metrics + bootstrap CIs over the bundled fixture extractions in
 ## Environment
 
 ```bash
-git clone <repo>
-cd llm-survey-model-specification
+git clone https://github.com/haseebraza715/QualModel.git
+cd QualModel
 
 # Editable install pulls dev tooling (ruff, black, mypy, pytest, hypothesis).
 make install
@@ -52,7 +53,7 @@ deltas vs. `full_pipeline`.
 | File | What it freezes |
 |---|---|
 | `pyproject.toml` | Direct dependency pins, build metadata, lint/format/type config |
-| `requirements.lock` | Currently mirrors `requirements.txt`. To freeze transitive deps too, run `pip-compile --output-file=requirements.lock pyproject.toml`. |
+| `requirements.lock` | Hash-locked transitive environment; regenerate with the exact `pip-compile` command in its header. |
 | `src/llm_survey/prompts/registry/v1.0/*.md` | Versioned prompt files with sha256 hashes attached to every run |
 | `Settings.seed` (default `20260101`) | RNG seed for bootstrap CIs and any future stochastic sampling |
 | `Settings.llm_temperature` (default `0.0`) | LLM decoding determinism |
@@ -72,8 +73,8 @@ Any non-trivial diff indicates a reproducibility risk.
 
 ## Known limitations
 
-- Transitive deps are still floating until `pip-compile` is re-run inside CI.
-  See `requirements.lock` header for the command.
+- The lock targets the supported Python environment recorded in its header;
+  regenerate and review it whenever the supported Python version changes.
 - Reranker / embedding-model comparisons in RESEARCH_PLAN §3.3 are not yet
   implemented — the harness scaffolding exists but the alternative backends
   haven't been wired in.

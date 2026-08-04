@@ -1,5 +1,8 @@
 # Launch Plan — Trust-First, Taste-First
 
+> **Archived launch plan.** This document contains estimates and proposals,
+> not measured costs, completed release status, or current operating guidance.
+
 > This is not a growth plan. It is a trust plan. Everything here exists because a qualitative researcher reading the demo has one question in their head: *"can I cite this without embarrassing myself?"* If the answer is no, nothing else matters — not HF trending, not Twitter threads, not KeyBERT.
 
 ---

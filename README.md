@@ -6,9 +6,10 @@
 > researcher can verify before they trust.**
 
 This repo is a research instrument, not a product. It ships with a deterministic
-evaluation harness, bootstrap confidence intervals, an ablation matrix, a
-versioned prompt registry, and a `make reproduce` recipe so a stranger can
-clone, run one command, and reproduce every reported number.
+evaluation harness, bootstrap confidence intervals, an ablation runner, a
+versioned prompt registry, and a `make reproduce` recipe for the explicitly
+listed deterministic fixture metrics. Live-model, ablation, latency, and cost
+claims require separately archived run artifacts.
 
 ![Animated: relationship → source quote → exports](static/demo-provenance.gif)
 
@@ -104,8 +105,8 @@ Architectural deep-dive: [ARCHITECTURE.md](ARCHITECTURE.md). Full method docs: [
 ### Install
 
 ```bash
-git clone <repo-url>
-cd llm-survey-model-specification
+git clone https://github.com/haseebraza715/QualModel.git
+cd QualModel
 make install        # editable install + dev tooling (ruff, black, mypy, pytest, hypothesis)
 ```
 
@@ -152,11 +153,14 @@ python3 -m streamlit run app.py
 The dashboard is **bring-your-own-key** — paste your OpenRouter key in the
 sidebar; it is held in session only and never written to disk.
 
-### Smoke test (no API key required)
+### Offline smoke test (no API key required)
 
 ```bash
-python3 scripts/smoke_e2e.py
+python3 scripts/smoke_offline.py
 ```
+
+The live end-to-end smoke is `python3 scripts/smoke_e2e.py`; it performs model
+calls and requires `OPENROUTER_API_KEY`.
 
 ---
 
@@ -168,7 +172,7 @@ how to verify it:
 | Layer | What it freezes | Where |
 |---|---|---|
 | Direct dependencies | Exact version pins | [pyproject.toml](pyproject.toml), [requirements.txt](requirements.txt) |
-| Transitive dependencies | Lockfile (regen with `pip-compile`) | [requirements.lock](requirements.lock) |
+| Transitive dependencies | Hash-locked Python environment (regenerate with the command in its header) | [requirements.lock](requirements.lock) |
 | Prompts | Versioned `.md` with sha256 + frontmatter (author, date, change rationale) | [src/llm_survey/prompts/registry/](src/llm_survey/prompts/registry/) |
 | Decoding | `temperature=0.0` default, fixed seed | [src/llm_survey/config.py](src/llm_survey/config.py) |
 | Run provenance | Per-run `runlog.json` with prompt sha256s, git commit, lockfile hash, model id, embedding model | [src/llm_survey/eval/runlog.py](src/llm_survey/eval/runlog.py) |
@@ -180,7 +184,7 @@ how to verify it:
 make reproduce
 ```
 
-That runs `make install` + `make eval`. The offline `make eval` recomputes
+That runs the documented offline fixture reproduction. The offline `make eval` recomputes
 [docs/evaluation_metrics.json](docs/evaluation_metrics.json) — including
 1000-resample bootstrap CIs and per-chunk variance — without any API calls,
 using bundled fixtures in [docs/fixtures/](docs/fixtures/). End-to-end
@@ -274,7 +278,9 @@ python3 scripts/run_ablation.py --variant full_pipeline --variant no_literature_
 | `single_pass_baseline` | Naive one-shot LLM call — what does scaffolding actually buy? |
 
 Results land in `outputs/ablation/ablation_results.json` with per-variant F1
-deltas vs. baseline and wall-clock cost.
+deltas vs. baseline and wall-clock cost. No versioned ablation output is
+currently committed, so ablation quality/cost results are **UNVERIFIED** until
+a run artifact records model, input, prompt, lockfile, and commit hashes.
 
 ---
 
@@ -348,7 +354,7 @@ The typed config object is at [src/llm_survey/config.py](src/llm_survey/config.p
 │   ├── run_ablation.py                # ablation CLI
 │   ├── smoke_e2e.py                   # end-to-end smoke
 │   └── push_hf_space.py               # HF Space deploy
-├── tests/                             # pytest; 87 offline tests + live-API tests
+├── tests/                             # pytest; offline suite + credential-gated live tests
 ├── docs/                              # method docs, eval gold, fixtures, runbooks
 ├── ui/dashboard.py                    # Streamlit dashboard
 ├── data/raw/                          # synthetic_workplace_survey.csv

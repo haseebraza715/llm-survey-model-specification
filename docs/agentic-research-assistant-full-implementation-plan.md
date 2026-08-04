@@ -1,5 +1,8 @@
 # Agentic Research Assistant — Full Implementation Plan (Saved)
 
+> **Archived planning snapshot.** Retained for historical context; it is not a
+> statement of current implementation, measured results, or current cost.
+
 Saved on: 2026-04-08  
 Source: User-provided master plan from project discussion.
 
@@ -148,4 +151,3 @@ State includes chunks, stores, chunk results, gap reports, clarification data, i
 - `.env` with LLM keys, Redis URL, thresholds, cache TTLs, paths
 - dependencies include instructor/langgraph/redis/celery/fastapi/sqlalchemy/spacy/bertopic/pyvis/networkx
 - quick start: install deps, download spaCy model, run pipeline, run Streamlit UI
-
