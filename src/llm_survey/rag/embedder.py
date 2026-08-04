@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from typing import List, Sequence
+from collections.abc import Sequence
 
 try:
     import diskcache
@@ -20,8 +20,8 @@ class _FallbackEmbeddingModel:
     def __init__(self, dimensions: int = 384):
         self.dimensions = dimensions
 
-    def encode(self, texts: Sequence[str], **_: object) -> List[List[float]]:
-        encoded: List[List[float]] = []
+    def encode(self, texts: Sequence[str], **_: object) -> list[list[float]]:
+        encoded: list[list[float]] = []
         for text in texts:
             vec = [0.0] * self.dimensions
             for token in text.lower().split():
@@ -65,7 +65,7 @@ class CachedEmbedder:
     def content_hash(text: str) -> str:
         return hashlib.md5(text.strip().lower().encode("utf-8")).hexdigest()
 
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         key = self.content_hash(text)
         if key in self.cache:
             return list(self.cache[key])
@@ -75,10 +75,10 @@ class CachedEmbedder:
         self.cache[key] = vector
         return vector
 
-    def embed_many(self, texts: Sequence[str]) -> List[List[float]]:
-        vectors: List[List[float]] = []
-        pending_indices: List[int] = []
-        pending_texts: List[str] = []
+    def embed_many(self, texts: Sequence[str]) -> list[list[float]]:
+        vectors: list[list[float]] = []
+        pending_indices: list[int] = []
+        pending_texts: list[str] = []
 
         for idx, text in enumerate(texts):
             key = self.content_hash(text)
@@ -91,7 +91,7 @@ class CachedEmbedder:
 
         if pending_texts:
             encoded = self.model.encode(pending_texts, normalize_embeddings=True)
-            for item_idx, emb in zip(pending_indices, encoded):
+            for item_idx, emb in zip(pending_indices, encoded, strict=True):
                 vector = emb.tolist() if hasattr(emb, "tolist") else list(emb)
                 vectors[item_idx] = vector
                 self.cache[self.content_hash(texts[item_idx])] = vector

@@ -3,8 +3,7 @@ from __future__ import annotations
 import json
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List
-
+from typing import Any
 
 SEMANTIC_SCHOLAR_URL = "https://api.semanticscholar.org/graph/v1"
 
@@ -15,14 +14,14 @@ class SemanticScholarClient:
     def __init__(self, timeout_seconds: int = 20):
         self.timeout_seconds = timeout_seconds
 
-    def _get(self, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         query = urllib.parse.urlencode(params)
         url = f"{SEMANTIC_SCHOLAR_URL}{path}?{query}"
         req = urllib.request.Request(url, headers={"User-Agent": "llm-survey-model-specification/1.0"})
         with urllib.request.urlopen(req, timeout=self.timeout_seconds) as response:
             return json.loads(response.read().decode("utf-8"))
 
-    def search_papers(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+    def search_papers(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
         payload = self._get(
             "/paper/search",
             {
@@ -33,7 +32,7 @@ class SemanticScholarClient:
         )
         rows = payload.get("data", [])
 
-        papers: List[Dict[str, Any]] = []
+        papers: list[dict[str, Any]] = []
         for row in rows:
             papers.append(
                 {

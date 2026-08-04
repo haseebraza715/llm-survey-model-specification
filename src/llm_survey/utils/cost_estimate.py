@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 # Conservative USD per 1M input tokens (OpenRouter varies by model; this is an order-of-magnitude guardrail).
 _DEFAULT_INPUT_USD_PER_1M = 0.15

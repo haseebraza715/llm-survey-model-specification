@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import chromadb
 
@@ -21,8 +21,8 @@ class LiteratureStore:
         self.embedder = embedder or CachedEmbedder()
 
     @staticmethod
-    def _to_chroma_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
-        output: Dict[str, Any] = {}
+    def _to_chroma_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+        output: dict[str, Any] = {}
         for key, value in metadata.items():
             if value is None:
                 continue
@@ -32,10 +32,10 @@ class LiteratureStore:
                 output[key] = str(value)
         return output
 
-    def add_papers(self, papers: List[Dict[str, Any]]) -> Dict[str, int]:
-        ids: List[str] = []
-        docs: List[str] = []
-        metas: List[Dict[str, Any]] = []
+    def add_papers(self, papers: list[dict[str, Any]]) -> dict[str, int]:
+        ids: list[str] = []
+        docs: list[str] = []
+        metas: list[dict[str, Any]] = []
         skipped = 0
 
         for paper in papers:
@@ -72,7 +72,7 @@ class LiteratureStore:
 
         return {"added": len(docs), "skipped": skipped}
 
-    def query(self, text: str, k: int = 5) -> List[Dict[str, Any]]:
+    def query(self, text: str, k: int = 5) -> list[dict[str, Any]]:
         embedding = self.embedder.embed(text)
         result = self.collection.query(
             query_embeddings=[embedding],
@@ -84,14 +84,14 @@ class LiteratureStore:
         metadatas = result.get("metadatas", [[]])[0]
         distances = result.get("distances", [[]])[0]
 
-        matches: List[Dict[str, Any]] = []
-        for doc, metadata, distance in zip(documents, metadatas, distances):
+        matches: list[dict[str, Any]] = []
+        for doc, metadata, distance in zip(documents, metadatas, distances, strict=True):
             matches.append({"text": doc, "metadata": metadata or {}, "distance": distance})
         return matches
 
     def format_context(self, text: str, k: int = 5) -> str:
         matches = self.query(text=text, k=k)
-        snippets: List[str] = []
+        snippets: list[str] = []
         for match in matches:
             meta = match.get("metadata", {})
             source = meta.get("source", "unknown")
