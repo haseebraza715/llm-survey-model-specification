@@ -6,9 +6,10 @@ import json
 import os
 import re
 import unicodedata
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 import nltk
 import pandas as pd
@@ -74,7 +75,7 @@ def clean_text(text: str) -> str:
     return cleaned
 
 
-def _split_txt_responses(text: str) -> List[str]:
+def _split_txt_responses(text: str) -> list[str]:
     """Split .txt into individual responses via separators or paragraphs."""
     if not text.strip():
         return []
@@ -89,10 +90,10 @@ def _split_txt_responses(text: str) -> List[str]:
     return [text.strip()]
 
 
-def _trim_pdf_headers_footers(page_texts: List[str]) -> List[str]:
+def _trim_pdf_headers_footers(page_texts: list[str]) -> list[str]:
     """Remove lines that appear on most pages (simple header/footer heuristic)."""
-    line_counts: Dict[str, int] = {}
-    page_lines: List[List[str]] = []
+    line_counts: dict[str, int] = {}
+    page_lines: list[list[str]] = []
 
     for page in page_texts:
         lines = [line.strip() for line in page.splitlines() if line.strip()]
@@ -103,16 +104,16 @@ def _trim_pdf_headers_footers(page_texts: List[str]) -> List[str]:
     threshold = max(2, int(len(page_texts) * 0.7))
     repetitive = {line for line, count in line_counts.items() if count >= threshold}
 
-    cleaned_pages: List[str] = []
+    cleaned_pages: list[str] = []
     for lines in page_lines:
         kept = [line for line in lines if line not in repetitive]
         cleaned_pages.append("\n".join(kept))
     return cleaned_pages
 
 
-def parse_csv(file_path: str) -> List[Dict[str, Any]]:
+def parse_csv(file_path: str) -> list[dict[str, Any]]:
     df = pd.read_csv(file_path)
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
 
     for idx, row in df.iterrows():
         raw_text = row.get("text", row.get("response", ""))
@@ -128,7 +129,7 @@ def parse_csv(file_path: str) -> List[Dict[str, Any]]:
         if pd.isna(timestamp):
             timestamp = None
 
-        extra_metadata: Dict[str, Any] = {}
+        extra_metadata: dict[str, Any] = {}
         for column in df.columns:
             if column in {"text", "response", "speaker_id", "timestamp"}:
                 continue
@@ -154,8 +155,8 @@ def parse_csv(file_path: str) -> List[Dict[str, Any]]:
     return records
 
 
-def parse_txt(file_path: str) -> List[Dict[str, Any]]:
-    with open(file_path, "r", encoding="utf-8") as f:
+def parse_txt(file_path: str) -> list[dict[str, Any]]:
+    with open(file_path, encoding="utf-8") as f:
         raw = f.read()
 
     responses = _split_txt_responses(raw)
@@ -171,17 +172,17 @@ def parse_txt(file_path: str) -> List[Dict[str, Any]]:
     ]
 
 
-def parse_pdf(file_path: str) -> List[Dict[str, Any]]:
+def parse_pdf(file_path: str) -> list[dict[str, Any]]:
     if pdfplumber is None:
         raise ImportError("pdfplumber is required for PDF parsing. Install pdfplumber>=0.10.")
 
-    page_texts: List[str] = []
+    page_texts: list[str] = []
     with pdfplumber.open(file_path) as pdf:
         for page in pdf.pages:
             page_texts.append(page.extract_text() or "")
 
     cleaned_pages = _trim_pdf_headers_footers(page_texts)
-    responses: List[Dict[str, Any]] = []
+    responses: list[dict[str, Any]] = []
     idx = 0
     for page_no, page_text in enumerate(cleaned_pages, start=1):
         for paragraph in _split_txt_responses(page_text):
@@ -198,7 +199,7 @@ def parse_pdf(file_path: str) -> List[Dict[str, Any]]:
     return responses
 
 
-def parse_docx(file_path: str) -> List[Dict[str, Any]]:
+def parse_docx(file_path: str) -> list[dict[str, Any]]:
     if DocxDocument is None:
         raise ImportError("python-docx is required for DOCX parsing. Install python-docx>=1.1.")
 
@@ -218,7 +219,7 @@ def parse_docx(file_path: str) -> List[Dict[str, Any]]:
     ]
 
 
-def load_file(file_path: str) -> List[Dict[str, Any]]:
+def load_file(file_path: str) -> list[dict[str, Any]]:
     """Dispatch parsing based on extension."""
     ext = Path(file_path).suffix.lower()
     if ext == ".csv":
@@ -232,9 +233,9 @@ def load_file(file_path: str) -> List[Dict[str, Any]]:
     raise ValueError(f"Unsupported file type: {ext}")
 
 
-def deduplicate_records(records: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def deduplicate_records(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Drop duplicate responses by cleaned-text fingerprint."""
-    deduped: List[Dict[str, Any]] = []
+    deduped: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     for record in records:
@@ -252,7 +253,7 @@ def deduplicate_records(records: Iterable[Dict[str, Any]]) -> List[Dict[str, Any
     return deduped
 
 
-def chunk_text(text: str, max_tokens: int = 500, overlap_sentences: int = 2) -> List[str]:
+def chunk_text(text: str, max_tokens: int = 500, overlap_sentences: int = 2) -> list[str]:
     """Sentence-aware chunking with overlap."""
     ensure_nltk_resources()
 
@@ -260,8 +261,8 @@ def chunk_text(text: str, max_tokens: int = 500, overlap_sentences: int = 2) -> 
     if not sentences:
         return []
 
-    chunks: List[str] = []
-    current: List[str] = []
+    chunks: list[str] = []
+    current: list[str] = []
     current_tokens = 0
 
     for sentence in sentences:
@@ -291,7 +292,7 @@ def detect_language(text: str) -> str:
         return "unknown"
 
 
-def extract_metadata(text: str, speaker_id: str | None = None, timestamp: str | None = None) -> Dict[str, Any]:
+def extract_metadata(text: str, speaker_id: str | None = None, timestamp: str | None = None) -> dict[str, Any]:
     """Extract metadata from text."""
     ensure_nltk_resources()
     blob = TextBlob(text)
@@ -309,12 +310,12 @@ def extract_metadata(text: str, speaker_id: str | None = None, timestamp: str | 
     return metadata
 
 
-def process_survey_data(file_path: str, max_tokens: int = 500) -> List[Dict[str, Any]]:
+def process_survey_data(file_path: str, max_tokens: int = 500) -> list[dict[str, Any]]:
     """Process survey/interview data from CSV/TXT/PDF/DOCX."""
     records = load_file(file_path)
     deduped_records = deduplicate_records(records)
 
-    processed_chunks: List[Dict[str, Any]] = []
+    processed_chunks: list[dict[str, Any]] = []
     for record in deduped_records:
         text = record["text"]
         chunks = chunk_text(text, max_tokens=max_tokens)
@@ -342,7 +343,7 @@ def process_survey_data(file_path: str, max_tokens: int = 500) -> List[Dict[str,
     return processed_chunks
 
 
-def save_processed_data(chunks: List[Dict[str, Any]], output_path: str) -> None:
+def save_processed_data(chunks: list[dict[str, Any]], output_path: str) -> None:
     """Save processed chunks to JSON file."""
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
@@ -350,7 +351,7 @@ def save_processed_data(chunks: List[Dict[str, Any]], output_path: str) -> None:
 
 
 def save_processed_data_for_run(
-    chunks: List[Dict[str, Any]],
+    chunks: list[dict[str, Any]],
     run_id: str,
     output_dir: str = "data/processed",
 ) -> str:

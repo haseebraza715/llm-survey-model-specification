@@ -97,16 +97,6 @@ def _matches_alias_list(extracted_variable: str, aliases: Iterable[str]) -> bool
     return any(_phrase_in_tokens(alias, tokens) for alias in aliases if alias)
 
 
-def _matches_substring_list(extracted_variable: str, substrings: Iterable[str]) -> bool:
-    """Legacy matcher: any substring (lemmatized, word-boundary) found in the extracted variable.
-
-    Word boundaries prevent "job" matching "side job" by accident — use the
-    lemmatized token sequence and check substring containment as a token-list
-    subsequence rather than as raw character containment.
-    """
-    return _matches_alias_list(extracted_variable, substrings)
-
-
 def relationship_matches(
     rel: dict,
     gold: dict,

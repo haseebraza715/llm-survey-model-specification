@@ -27,19 +27,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Only the deps needed for lint/typecheck/eval-stability. Full pipeline
-          # deps (chromadb, llama-index, sentence-transformers, bertopic) are
+          # deps (chromadb, sentence-transformers, bertopic) are
           # heavy and unnecessary for the offline checks below.
           pip install ruff black mypy pytest pyyaml pydantic pydantic-settings structlog hypothesis
 
       - name: Ruff
-        run: |
-          ruff check \
-            src/llm_survey/eval \
-            src/llm_survey/config.py \
-            src/llm_survey/prompts/registry.py \
-            src/llm_survey/logging_config.py \
-            scripts/compute_eval_metrics.py \
-            scripts/run_ablation.py
+        run: ruff check .
 
       - name: Black --check
         run: |
@@ -80,3 +73,30 @@ jobs:
           # Same input + same seed => byte-identical metrics. If this fails, a
           # nondeterminism bug has been introduced.
           diff -u /tmp/metrics_run1.json /tmp/metrics_run2.json
+
+  full-offline-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # The lock file is compiled for 3.12 (see its header); keep in sync.
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.lock
+
+      - name: Install full pinned dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
+          pip install -e . --no-deps
+          pip install pytest hypothesis
+
+      - name: Run the complete offline test suite
+        # Auto-discovery on purpose: no test-file allowlist. Every offline test
+        # added under tests/ is collected automatically; only tests explicitly
+        # marked live_api (network + credentials) are excluded.
+        run: PYTHONPATH=.:src pytest -m "not live_api" -q

@@ -3,15 +3,16 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter, defaultdict
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Any, Dict, Iterable, List, Mapping, Sequence
+from typing import Any, ClassVar
 
 from llm_survey.schemas.consolidation import (
     ConflictReport,
+    ConsensusStrength,
     ConsolidatedModel,
     ConsolidatedRelationship,
-    ConsensusStrength,
     Contradiction,
     ContradictionType,
     HypothesisValidation,
@@ -24,7 +25,6 @@ from llm_survey.schemas.consolidation import (
     ScoredHypothesis,
 )
 from llm_survey.schemas.extraction import EvidenceStrength, RelationshipDirection, VariableType
-
 
 _STOP_TOKENS = {
     "and",
@@ -109,9 +109,9 @@ def _variable_similarity(a: str, b: str) -> float:
     return max(jaccard, seq * 0.9)
 
 
-def _dedupe_keep_order(values: Iterable[str]) -> List[str]:
+def _dedupe_keep_order(values: Iterable[str]) -> list[str]:
     seen: set[str] = set()
-    output: List[str] = []
+    output: list[str] = []
     for value in values:
         cleaned = _normalize_whitespace(value)
         key = cleaned.lower()
@@ -199,7 +199,7 @@ class ModelConsolidator:
 
     def consolidate(
         self,
-        extraction_results: List[Dict[str, Any]],
+        extraction_results: list[dict[str, Any]],
         gap_report: Mapping[str, Any] | None = None,
         clarification_plan: Mapping[str, Any] | None = None,
     ) -> ConsolidatedModel:
@@ -237,8 +237,8 @@ class ModelConsolidator:
             overall_confidence=overall_confidence,
         )
 
-    def _collect_variable_mentions(self, successful: Sequence[Dict[str, Any]]) -> List[_VariableMention]:
-        mentions: List[_VariableMention] = []
+    def _collect_variable_mentions(self, successful: Sequence[dict[str, Any]]) -> list[_VariableMention]:
+        mentions: list[_VariableMention] = []
         for row in successful:
             chunk_id = str(row.get("chunk_id", ""))
             model = row.get("model") or {}
@@ -274,8 +274,8 @@ class ModelConsolidator:
                     )
         return mentions
 
-    def _cluster_variables(self, mentions: Sequence[_VariableMention]) -> List[List[_VariableMention]]:
-        clusters: List[List[_VariableMention]] = []
+    def _cluster_variables(self, mentions: Sequence[_VariableMention]) -> list[list[_VariableMention]]:
+        clusters: list[list[_VariableMention]] = []
         for mention in mentions:
             placed = False
             for cluster in clusters:
@@ -293,9 +293,9 @@ class ModelConsolidator:
         clusters: Sequence[Sequence[_VariableMention]],
         *,
         total_chunks: int,
-    ) -> tuple[List[MergedVariable], Dict[str, str]]:
-        merged: List[MergedVariable] = []
-        alias_to_canonical: Dict[str, str] = {}
+    ) -> tuple[list[MergedVariable], dict[str, str]]:
+        merged: list[MergedVariable] = []
+        alias_to_canonical: dict[str, str] = {}
 
         for cluster in clusters:
             names = [_normalize_whitespace(v.name) for v in cluster]
@@ -336,10 +336,10 @@ class ModelConsolidator:
 
     def _collect_relationship_mentions(
         self,
-        successful: Sequence[Dict[str, Any]],
+        successful: Sequence[dict[str, Any]],
         alias_to_canonical: Mapping[str, str],
-    ) -> List[_RelationshipMention]:
-        mentions: List[_RelationshipMention] = []
+    ) -> list[_RelationshipMention]:
+        mentions: list[_RelationshipMention] = []
         for row in successful:
             chunk_id = str(row.get("chunk_id", ""))
             for relationship in (row.get("model") or {}).get("relationships") or []:
@@ -366,12 +366,12 @@ class ModelConsolidator:
         mentions: Sequence[_RelationshipMention],
         *,
         total_chunks: int,
-    ) -> List[ConsolidatedRelationship]:
+    ) -> list[ConsolidatedRelationship]:
         buckets: dict[tuple[str, str, str], list[_RelationshipMention]] = defaultdict(list)
         for mention in mentions:
             buckets[(mention.from_variable, mention.to_variable, mention.direction.value)].append(mention)
 
-        relationships: List[ConsolidatedRelationship] = []
+        relationships: list[ConsolidatedRelationship] = []
         for (from_variable, to_variable, direction), rows in buckets.items():
             source_chunk_ids = sorted({row.chunk_id for row in rows if row.chunk_id})
             support_count = len(source_chunk_ids)
@@ -401,7 +401,7 @@ class ModelConsolidator:
         relationships.sort(key=lambda item: (-item.confidence, item.from_variable.lower(), item.to_variable.lower()))
         return relationships
 
-    def _attach_contradicting_quotes(self, relationships: List[ConsolidatedRelationship]) -> None:
+    def _attach_contradicting_quotes(self, relationships: list[ConsolidatedRelationship]) -> None:
         by_pair: dict[tuple[str, str], list[ConsolidatedRelationship]] = defaultdict(list)
         for relationship in relationships:
             by_pair[(relationship.from_variable, relationship.to_variable)].append(relationship)
@@ -410,7 +410,7 @@ class ModelConsolidator:
             if len(variants) < 2:
                 continue
             for relationship in variants:
-                opposing_quotes: List[str] = []
+                opposing_quotes: list[str] = []
                 for other in variants:
                     if other is relationship:
                         continue
@@ -419,11 +419,11 @@ class ModelConsolidator:
 
     def _collect_hypothesis_mentions(
         self,
-        successful: Sequence[Dict[str, Any]],
+        successful: Sequence[dict[str, Any]],
         alias_to_canonical: Mapping[str, str],
         consolidated_relationships: Sequence[ConsolidatedRelationship],
-    ) -> List[_HypothesisMention]:
-        mentions: List[_HypothesisMention] = []
+    ) -> list[_HypothesisMention]:
+        mentions: list[_HypothesisMention] = []
         relationship_pairs = {
             (relationship.from_variable, relationship.to_variable): relationship.direction
             for relationship in consolidated_relationships
@@ -439,11 +439,11 @@ class ModelConsolidator:
                 canonical_from = ""
                 canonical_to = ""
                 direction = _safe_direction(hypothesis.get("direction", RelationshipDirection.UNCLEAR.value))
-                for from_variable, to_variable in relationship_pairs:
+                for (from_variable, to_variable), relationship_direction in relationship_pairs.items():
                     if from_variable.lower() in statement.lower() and to_variable.lower() in statement.lower():
                         canonical_from = from_variable
                         canonical_to = to_variable
-                        direction = relationship_pairs[(from_variable, to_variable)]
+                        direction = relationship_direction
                         break
                 mentions.append(
                     _HypothesisMention(
@@ -481,7 +481,7 @@ class ModelConsolidator:
         consolidated_relationships: Sequence[ConsolidatedRelationship],
         *,
         total_chunks: int,
-    ) -> List[ScoredHypothesis]:
+    ) -> list[ScoredHypothesis]:
         linked_relationships = {
             f"{relationship.from_variable} -> {relationship.to_variable} ({relationship.direction.value})": relationship
             for relationship in consolidated_relationships
@@ -492,7 +492,7 @@ class ModelConsolidator:
             if key:
                 buckets[key].append(mention)
 
-        hypotheses: List[ScoredHypothesis] = []
+        hypotheses: list[ScoredHypothesis] = []
         for idx, rows in enumerate(buckets.values(), start=1):
             best = max(rows, key=lambda item: len(item.statement))
             source_chunk_ids = sorted({row.chunk_id for row in rows if row.chunk_id})
@@ -509,7 +509,7 @@ class ModelConsolidator:
             base_confidence = sum(related_confidences) / max(1, len(related_confidences)) if related_confidences else 0.55
             contradiction_penalty = 0.15 if any(linked_relationships[key].contradicting_quotes for key in relationship_keys) else 0.0
             confidence = round(max(0.0, min(0.99, (support_fraction * 0.5) + (base_confidence * 0.5) - contradiction_penalty)), 3)
-            contradicting_quotes: List[str] = []
+            contradicting_quotes: list[str] = []
             for key in relationship_keys:
                 contradicting_quotes.extend(linked_relationships[key].contradicting_quotes)
             consensus_strength = ConsensusStrength.MODERATE if confidence >= 0.7 else ConsensusStrength.WEAK
@@ -539,9 +539,9 @@ class ModelConsolidator:
 
     def _merge_moderators(
         self,
-        successful: Sequence[Dict[str, Any]],
+        successful: Sequence[dict[str, Any]],
         alias_to_canonical: Mapping[str, str],
-    ) -> List[ModeratorSpec]:
+    ) -> list[ModeratorSpec]:
         buckets: dict[tuple[str, str], _ModeratorMention] = {}
         for row in successful:
             chunk_id = str(row.get("chunk_id", ""))
@@ -615,7 +615,7 @@ class ModelConsolidator:
         gap_report: Mapping[str, Any] | None,
         clarification_plan: Mapping[str, Any] | None,
         relationships: Sequence[ConsolidatedRelationship],
-    ) -> List[str]:
+    ) -> list[str]:
         questions = [
             str(question.get("question_text", "")).strip()
             for question in (clarification_plan or {}).get("questions", [])[:5]
@@ -660,7 +660,7 @@ class ModelConsolidator:
 class ConflictDetector:
     """Detect contradictions and attempt lightweight deterministic resolution."""
 
-    _IGNORE_METADATA_KEYS = {
+    _IGNORE_METADATA_KEYS: ClassVar[set[str]] = {
         "chunk_id",
         "content_hash",
         "language",
@@ -676,10 +676,10 @@ class ConflictDetector:
     def detect(
         self,
         consolidated_model: ConsolidatedModel,
-        extraction_results: Sequence[Dict[str, Any]],
+        extraction_results: Sequence[dict[str, Any]],
         literature_store: Any | None = None,
     ) -> ConflictReport:
-        contradictions: List[Contradiction] = []
+        contradictions: list[Contradiction] = []
         relationship_lookup: dict[tuple[str, str], list[ConsolidatedRelationship]] = defaultdict(list)
         for relationship in consolidated_model.relationships:
             relationship_lookup[(relationship.from_variable, relationship.to_variable)].append(relationship)
@@ -693,9 +693,9 @@ class ConflictDetector:
         for (from_variable, to_variable), variants in relationship_lookup.items():
             if len(variants) < 2:
                 continue
-            variants = sorted(variants, key=lambda item: item.confidence, reverse=True)
-            version_a = variants[0]
-            version_b = variants[1]
+            ranked_variants = sorted(variants, key=lambda item: item.confidence, reverse=True)
+            version_a = ranked_variants[0]
+            version_b = ranked_variants[1]
             if version_a.direction == version_b.direction:
                 continue
 
@@ -839,7 +839,7 @@ class LiteratureValidator:
         hypotheses: Sequence[ScoredHypothesis],
         literature_store: Any | None,
     ) -> LiteratureValidationReport:
-        validations: List[HypothesisValidation] = []
+        validations: list[HypothesisValidation] = []
         if literature_store is None:
             return LiteratureValidationReport(validations=[], strong_support_count=0, contested_count=0, novelty_count=0)
 
@@ -866,9 +866,9 @@ class LiteratureValidator:
         except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
             matches = []
 
-        supporting: List[PaperReference] = []
-        contradicting: List[PaperReference] = []
-        partial: List[PaperReference] = []
+        supporting: list[PaperReference] = []
+        contradicting: list[PaperReference] = []
+        partial: list[PaperReference] = []
 
         for match in matches:
             paper = self._to_paper_reference(match, hypothesis)

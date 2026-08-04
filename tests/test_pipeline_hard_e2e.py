@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import instructor
 import pandas as pd
@@ -35,7 +35,7 @@ class _FakeCompletions:
     def __init__(self) -> None:
         self._n = 0
 
-    def create(self, **kwargs: Dict[str, Any]) -> ChunkExtractionResult:
+    def create(self, **kwargs: dict[str, Any]) -> ChunkExtractionResult:
         self._n += 1
         return ChunkExtractionResult(
             variables=[

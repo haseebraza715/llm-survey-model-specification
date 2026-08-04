@@ -6,11 +6,19 @@ import re
 import urllib.error
 from collections import Counter
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 
 import instructor
 import yaml
-from openai import APIConnectionError, APIError, APITimeoutError, AuthenticationError, BadRequestError, OpenAI, RateLimitError
+from openai import (
+    APIConnectionError,
+    APIError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    OpenAI,
+    RateLimitError,
+)
 from pydantic import ValidationError
 
 from llm_survey.agents import (
@@ -45,7 +53,8 @@ from llm_survey.utils.preprocess import (
 )
 from llm_survey.utils.prompt_safety import build_refinement_user_message, build_thematic_analysis_user_message
 
-def _inject_provenance(model: Dict[str, Any], chunk_id: str) -> None:
+
+def _inject_provenance(model: dict[str, Any], chunk_id: str) -> None:
     if not chunk_id or not isinstance(model, dict):
         return
     for key in ("variables", "relationships", "moderators"):
@@ -67,10 +76,10 @@ def _is_empty_extraction(model: ChunkExtractionResult) -> bool:
     )
 
 
-def summarize_extraction_failures(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_extraction_failures(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Counts for dashboard / gap-detection warnings."""
     total = len(results)
-    by_kind: Dict[str, int] = {"api_error": 0, "parse_error": 0, "empty_extraction": 0}
+    by_kind: dict[str, int] = {"api_error": 0, "parse_error": 0, "empty_extraction": 0}
     for row in results:
         if row.get("success"):
             continue
@@ -92,11 +101,12 @@ class RAGModelExtractor:
     def __init__(
         self,
         openai_api_key: str = "",
+        *,
         llm_model: str = "google/gemma-4-31b-it",
         embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
         base_url: str = "https://openrouter.ai/api/v1",
         temperature: float = 0.0,
-        extra_headers: Dict[str, str] | None = None,
+        extra_headers: dict[str, str] | None = None,
         survey_chroma_path: str = "data/chroma/survey",
         survey_collection: str = "survey",
         literature_chroma_path: str = "data/chroma/literature",
@@ -148,7 +158,7 @@ class RAGModelExtractor:
         self.conflict_detector = ConflictDetector()
         self.literature_validator = LiteratureValidator()
 
-        self.processed_chunks: List[Dict[str, Any]] = []
+        self.processed_chunks: list[dict[str, Any]] = []
         self.run_id: str = generate_run_id("pipeline")
 
         # Provenance and cost tracking — every LLM call is recorded against the
@@ -221,7 +231,7 @@ class RAGModelExtractor:
             phase=phase,
         )
 
-    def dump_run_artifacts(self, output_dir: str) -> Dict[str, str]:
+    def dump_run_artifacts(self, output_dir: str) -> dict[str, str]:
         """Write `cost_report.json` + `runlog.json` for the current run.
 
         Safe to call multiple times; later calls overwrite earlier ones.
@@ -250,7 +260,7 @@ class RAGModelExtractor:
         file_path: str,
         max_tokens: int = 500,
         save_processed: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Process source files and persist chunk embeddings into survey store."""
         self.run_id = generate_run_id("pipeline")
         print(f"Processing data from {file_path}...")
@@ -274,7 +284,7 @@ class RAGModelExtractor:
 
         return self.processed_chunks
 
-    def _extract_topic_queries(self, chunks: List[Dict[str, Any]], max_queries: int = 8) -> List[str]:
+    def _extract_topic_queries(self, chunks: list[dict[str, Any]], max_queries: int = 8) -> list[str]:
         """Generate literature search queries from survey chunk corpus."""
         stop_words = {
             "the",
@@ -308,7 +318,7 @@ class RAGModelExtractor:
             "more",
         }
 
-        tokens: List[str] = []
+        tokens: list[str] = []
         for chunk in chunks:
             words = re.findall(r"[a-zA-Z][a-zA-Z\-]{2,}", chunk.get("text", "").lower())
             tokens.extend([w for w in words if w not in stop_words])
@@ -317,7 +327,7 @@ class RAGModelExtractor:
             return []
 
         top_terms = [word for word, _ in Counter(tokens).most_common(max_queries * 4)]
-        queries: List[str] = []
+        queries: list[str] = []
         for i in range(0, len(top_terms), 3):
             phrase = " ".join(top_terms[i : i + 3]).strip()
             if len(phrase.split()) >= 2:
@@ -330,7 +340,7 @@ class RAGModelExtractor:
 
         return queries
 
-    def _populate_literature_store(self, chunks: List[Dict[str, Any]]) -> None:
+    def _populate_literature_store(self, chunks: list[dict[str, Any]]) -> None:
         """Fetch and index literature abstracts from Semantic Scholar + PubMed."""
         queries = self._extract_topic_queries(chunks)
         if not queries:
@@ -338,7 +348,7 @@ class RAGModelExtractor:
             return
 
         papers_per_query = max(5, self.literature_target_papers // max(1, len(queries) * 2))
-        gathered: List[Dict[str, Any]] = []
+        gathered: list[dict[str, Any]] = []
 
         for query in queries:
             try:
@@ -354,7 +364,7 @@ class RAGModelExtractor:
             if len(gathered) >= self.literature_target_papers:
                 break
 
-        deduped: List[Dict[str, Any]] = []
+        deduped: list[dict[str, Any]] = []
         seen: set[str] = set()
         for paper in gathered:
             key = f"{paper.get('source')}::{paper.get('paper_id')}"
@@ -377,12 +387,13 @@ class RAGModelExtractor:
     def extract_model_from_chunk(
         self,
         chunk_text: str,
+        *,
         use_rag: bool = True,
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
         enriched_context: str = "",
         chunk_id: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Extract one structured model from a chunk using survey + literature context."""
         survey_context = ""
         literature_context = ""
@@ -406,7 +417,7 @@ class RAGModelExtractor:
         if chunk_id:
             prompt = f"{prompt}\n\nExtraction metadata:\nchunk_id: {chunk_id}\n"
 
-        base_out: Dict[str, Any] = {
+        base_out: dict[str, Any] = {
             "survey_context": survey_context,
             "literature_context": literature_context,
             "failure_kind": None,
@@ -497,18 +508,19 @@ class RAGModelExtractor:
 
     def extract_models_from_all_chunks(
         self,
+        *,
         use_rag: bool = True,
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
         save_results: bool = True,
         enriched_context: str = "",
         output_suffix: str = "",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Extract structured models from all available chunks."""
         if not self.processed_chunks:
             raise ValueError("No processed chunks available. Run process_and_store_data first.")
 
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         print(f"Extracting models from {len(self.processed_chunks)} chunks...")
         with self.recorder.phase("extraction"):
             for i, chunk in enumerate(self.processed_chunks, start=1):
@@ -541,10 +553,10 @@ class RAGModelExtractor:
 
     def detect_cross_chunk_gaps(
         self,
-        extraction_results: List[Dict[str, Any]],
+        extraction_results: list[dict[str, Any]],
         save_results: bool = True,
         output_suffix: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Detect cross-chunk gaps and score completeness/testability."""
         with self.recorder.phase("gap_detection"):
             report_model = self.gap_detector.detect(extraction_results)
@@ -563,11 +575,11 @@ class RAGModelExtractor:
 
     def generate_clarification_plan(
         self,
-        gap_report: Dict[str, Any],
+        gap_report: dict[str, Any],
         save_results: bool = True,
         auto_answer_top_k: int = 3,
         output_suffix: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Convert gap report into actionable clarification questions."""
         with self.recorder.phase("clarification"):
             plan_model = self.clarification_agent.build_plan(
@@ -590,11 +602,11 @@ class RAGModelExtractor:
 
     def consolidate_model(
         self,
-        extraction_results: List[Dict[str, Any]],
-        gap_report: Dict[str, Any] | None = None,
-        clarification_plan: Dict[str, Any] | None = None,
+        extraction_results: list[dict[str, Any]],
+        gap_report: dict[str, Any] | None = None,
+        clarification_plan: dict[str, Any] | None = None,
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Merge chunk-level extractions into one consolidated model."""
         model = self.consolidator.consolidate(
             extraction_results=extraction_results,
@@ -609,10 +621,10 @@ class RAGModelExtractor:
 
     def detect_conflicts(
         self,
-        consolidated_model: Dict[str, Any],
-        extraction_results: List[Dict[str, Any]],
+        consolidated_model: dict[str, Any],
+        extraction_results: list[dict[str, Any]],
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Flag contradictions in the consolidated model."""
         report = self.conflict_detector.detect(
             consolidated_model=ConsolidatedModel.model_validate(consolidated_model),
@@ -627,9 +639,9 @@ class RAGModelExtractor:
 
     def validate_hypotheses(
         self,
-        consolidated_model: Dict[str, Any],
+        consolidated_model: dict[str, Any],
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Validate consolidated hypotheses against the literature store."""
         report = self.literature_validator.validate(
             hypotheses=[ScoredHypothesis.model_validate(row) for row in consolidated_model.get("hypotheses", [])],
@@ -643,10 +655,10 @@ class RAGModelExtractor:
 
     @staticmethod
     def _merge_validation_into_model(
-        consolidated_model: Dict[str, Any],
-        conflict_report: Dict[str, Any] | None,
-        validation_report: Dict[str, Any] | None,
-    ) -> Dict[str, Any]:
+        consolidated_model: dict[str, Any],
+        conflict_report: dict[str, Any] | None,
+        validation_report: dict[str, Any] | None,
+    ) -> dict[str, Any]:
         merged = json.loads(json.dumps(consolidated_model))
         merged["contradictions"] = list((conflict_report or {}).get("contradictions", []))
         validation_map = {
@@ -664,14 +676,15 @@ class RAGModelExtractor:
 
     def export_final_outputs(
         self,
-        consolidated_model: Dict[str, Any],
-        conflict_report: Dict[str, Any] | None = None,
-        validation_report: Dict[str, Any] | None = None,
+        consolidated_model: dict[str, Any],
+        *,
+        conflict_report: dict[str, Any] | None = None,
+        validation_report: dict[str, Any] | None = None,
         total_chunks: int = 0,
         iterations_completed: int = 0,
         output_dir: str = "outputs",
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build the final model-spec artifacts for review and sharing."""
         metadata = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -727,13 +740,14 @@ class RAGModelExtractor:
 
     def finalize_model_outputs(
         self,
-        extraction_results: List[Dict[str, Any]],
-        gap_report: Dict[str, Any],
-        clarification_plan: Dict[str, Any],
-        refinement_report: Dict[str, Any] | None = None,
+        extraction_results: list[dict[str, Any]],
+        *,
+        gap_report: dict[str, Any],
+        clarification_plan: dict[str, Any],
+        refinement_report: dict[str, Any] | None = None,
         output_dir: str = "outputs",
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run consolidation, conflict detection, literature validation, and final exports."""
         with self.recorder.phase("consolidation"):
             consolidated_model = self.consolidate_model(
@@ -785,13 +799,13 @@ class RAGModelExtractor:
             "final_exports": exports,
         }
 
-    def _build_enriched_context(self, clarification_plan: Dict[str, Any], gap_report: Dict[str, Any]) -> str:
+    def _build_enriched_context(self, clarification_plan: dict[str, Any], gap_report: dict[str, Any]) -> str:
         """Build enriched context for refinement iterations."""
         priority_gaps = clarification_plan.get("questions", [])[:5]
         auto_answers = clarification_plan.get("auto_answers", [])
         top_gap_descriptions = gap_report.get("priority_gaps", [])[:3]
 
-        segments: List[str] = []
+        segments: list[str] = []
         if top_gap_descriptions:
             segments.append("Priority unresolved gaps:\n- " + "\n- ".join(top_gap_descriptions))
 
@@ -816,16 +830,17 @@ class RAGModelExtractor:
 
     def run_refinement_loop(
         self,
-        extraction_results: List[Dict[str, Any]],
-        gap_report: Dict[str, Any],
-        clarification_plan: Dict[str, Any],
+        extraction_results: list[dict[str, Any]],
+        *,
+        gap_report: dict[str, Any],
+        clarification_plan: dict[str, Any],
         use_rag: bool = True,
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
         max_iterations: int = 2,
         completeness_threshold: float = 0.75,
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Iteratively re-extract with enriched clarification context until completeness threshold or max iterations.
         """
@@ -836,12 +851,12 @@ class RAGModelExtractor:
         current_gap_report = gap_report
         current_clarification_plan = clarification_plan
 
-        def _coverage(rep: Dict[str, Any]) -> float:
+        def _coverage(rep: dict[str, Any]) -> float:
             return float(
                 rep.get("structural_coverage_score", rep.get("overall_model_completeness", 0.0)) or 0.0
             )
 
-        history: List[Dict[str, Any]] = [
+        history: list[dict[str, Any]] = [
             {
                 "iteration": 0,
                 "completeness": _coverage(current_gap_report),
@@ -965,7 +980,7 @@ class RAGModelExtractor:
         if isinstance(content, str):
             return content
         if isinstance(content, list):
-            parts: List[str] = []
+            parts: list[str] = []
             for part in content:
                 if isinstance(part, dict):
                     text = part.get("text")
@@ -974,7 +989,7 @@ class RAGModelExtractor:
             return "\n".join(parts).strip()
         return ""
 
-    def _call_yaml(self, prompt: str) -> Dict[str, Any]:
+    def _call_yaml(self, prompt: str) -> dict[str, Any]:
         import time as _time
         _t0 = _time.perf_counter()
         completion: Any = None
@@ -1009,9 +1024,9 @@ class RAGModelExtractor:
 
     def perform_thematic_analysis(
         self,
-        text_excerpts: List[str],
+        text_excerpts: list[str],
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform thematic analysis across multiple text excerpts."""
         combined_text = "\n\n---\n\n".join(text_excerpts)
 
@@ -1040,10 +1055,10 @@ class RAGModelExtractor:
 
     def refine_model(
         self,
-        original_model: Dict[str, Any],
+        original_model: dict[str, Any],
         context: str = "",
         save_results: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Refine and validate a model specification."""
         model_yaml = yaml.dump(original_model, default_flow_style=False)
 

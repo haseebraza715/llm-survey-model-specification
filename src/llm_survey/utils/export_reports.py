@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, Sequence
+from typing import Any
 
 import yaml
 
@@ -25,10 +26,10 @@ def _plain(payload: Any) -> Any:
     return payload
 
 
-def _validation_map(validations: Any) -> Dict[str, Dict[str, Any]]:
+def _validation_map(validations: Any) -> dict[str, dict[str, Any]]:
     plain = _plain(validations) or {}
     rows = plain.get("validations", []) if isinstance(plain, dict) else []
-    output: Dict[str, Dict[str, Any]] = {}
+    output: dict[str, dict[str, Any]] = {}
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -39,11 +40,11 @@ def _validation_map(validations: Any) -> Dict[str, Dict[str, Any]]:
 
 
 def build_methods_markdown(
-    extraction_results: Sequence[Dict[str, Any]],
+    extraction_results: Sequence[dict[str, Any]],
     gap_report: Mapping[str, Any] | None,
     chunk_lookup: Mapping[str, str],
 ) -> str:
-    lines: List[str] = [
+    lines: list[str] = [
         "# Structured model draft (machine-assisted)",
         "",
         "## Structural coverage (heuristic)",
@@ -54,7 +55,7 @@ def build_methods_markdown(
         "",
     ]
     ev_idx = 1
-    evidence_lines: List[str] = []
+    evidence_lines: list[str] = []
 
     for row in extraction_results:
         if not row.get("success") or not row.get("model"):
@@ -96,7 +97,7 @@ def build_methods_markdown(
 
 
 def build_docx_bytes(
-    extraction_results: Sequence[Dict[str, Any]],
+    extraction_results: Sequence[dict[str, Any]],
     gap_report: Mapping[str, Any] | None,
     chunk_lookup: Mapping[str, str],
 ) -> bytes:
@@ -118,7 +119,7 @@ def build_docx_bytes(
 
     doc.add_heading("Variables and relationships", level=1)
     n = 1
-    appendix: List[tuple[int, str, str, str]] = []
+    appendix: list[tuple[int, str, str, str]] = []
 
     for row in extraction_results:
         if not row.get("success") or not row.get("model"):
@@ -172,7 +173,7 @@ def build_docx_bytes(
 
 
 def build_json_export_bundle(
-    extraction_results: Sequence[Dict[str, Any]],
+    extraction_results: Sequence[dict[str, Any]],
     gap_report: Mapping[str, Any] | None,
     chunk_lookup: Mapping[str, str],
     failure_summary: Mapping[str, Any] | None,
@@ -284,7 +285,7 @@ def build_causal_graph_html(
     conflicts = (_plain(conflict_report) or {}).get("contradictions", [])
     mermaid = build_mermaid_diagram(model)
 
-    relationship_cards: List[str] = []
+    relationship_cards: list[str] = []
     for row in model.get("relationships", []):
         quotes = "".join(f"<li>{quote}</li>" for quote in row.get("supporting_quotes", [])[:4])
         relationship_cards.append(
@@ -297,7 +298,7 @@ def build_causal_graph_html(
             "</details>"
         )
 
-    hypothesis_cards: List[str] = []
+    hypothesis_cards: list[str] = []
     for row in model.get("hypotheses", []):
         validation = validation_by_id.get(str(row.get("id", "")), {})
         hypothesis_cards.append(
@@ -365,7 +366,7 @@ def build_evidence_report_markdown(
     model = _plain(consolidated_model) or {}
     validation_by_id = _validation_map(validations)
     conflicts = (_plain(conflict_report) or {}).get("contradictions", [])
-    lines: List[str] = [
+    lines: list[str] = [
         "# Evidence report",
         "",
         "## Model summary",

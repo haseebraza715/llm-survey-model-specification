@@ -4,8 +4,7 @@ import json
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List
-
+from typing import Any
 
 PUBMED_EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -16,21 +15,21 @@ class PubMedClient:
     def __init__(self, timeout_seconds: int = 20):
         self.timeout_seconds = timeout_seconds
 
-    def _get_json(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_json(self, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
         query = urllib.parse.urlencode(params)
         url = f"{PUBMED_EUTILS}/{endpoint}?{query}"
         req = urllib.request.Request(url, headers={"User-Agent": "llm-survey-model-specification/1.0"})
         with urllib.request.urlopen(req, timeout=self.timeout_seconds) as response:
             return json.loads(response.read().decode("utf-8"))
 
-    def _get_text(self, endpoint: str, params: Dict[str, Any]) -> str:
+    def _get_text(self, endpoint: str, params: dict[str, Any]) -> str:
         query = urllib.parse.urlencode(params)
         url = f"{PUBMED_EUTILS}/{endpoint}?{query}"
         req = urllib.request.Request(url, headers={"User-Agent": "llm-survey-model-specification/1.0"})
         with urllib.request.urlopen(req, timeout=self.timeout_seconds) as response:
             return response.read().decode("utf-8")
 
-    def search_papers(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+    def search_papers(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
         search = self._get_json(
             "esearch.fcgi",
             {
@@ -63,7 +62,7 @@ class PubMedClient:
         )
 
         abstracts = self._parse_abstracts(xml_payload)
-        papers: List[Dict[str, Any]] = []
+        papers: list[dict[str, Any]] = []
         result_block = summaries.get("result", {})
 
         for pmid in pmids:
@@ -91,8 +90,8 @@ class PubMedClient:
         return None
 
     @staticmethod
-    def _parse_abstracts(xml_payload: str) -> Dict[str, str]:
-        abstracts: Dict[str, str] = {}
+    def _parse_abstracts(xml_payload: str) -> dict[str, str]:
+        abstracts: dict[str, str] = {}
         try:
             root = ET.fromstring(xml_payload)
         except ET.ParseError:

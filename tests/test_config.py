@@ -1,8 +1,6 @@
 """Smoke tests for `llm_survey.config.Settings`."""
 from __future__ import annotations
 
-import os
-
 from llm_survey.config import Settings
 
 

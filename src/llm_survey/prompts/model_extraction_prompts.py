@@ -6,7 +6,6 @@ source of truth — editing the .md files there will update these constants on
 next import. The fallback string literals below are kept so the package still
 works if the registry is missing or fails to load (e.g. partial install).
 """
-from typing import Any, Dict
 
 from llm_survey.utils.prompt_safety import build_structured_extraction_user_message
 

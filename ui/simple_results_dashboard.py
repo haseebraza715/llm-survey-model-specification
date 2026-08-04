@@ -1,8 +1,8 @@
-import streamlit as st
 import json
 import os
+
 import pandas as pd
-from datetime import datetime
+import streamlit as st
 
 st.set_page_config(
     page_title="LLM Extraction Results Viewer",
@@ -19,7 +19,7 @@ results_path = "outputs/extracted_models.json"
 # Load processed data
 processed_chunks = []
 if os.path.exists(processed_path):
-    with open(processed_path, "r", encoding="utf-8") as f:
+    with open(processed_path, encoding="utf-8") as f:
         processed_chunks = json.load(f)
 else:
     st.warning("No processed data found.")
@@ -27,7 +27,7 @@ else:
 # Load extraction results
 extraction_results = []
 if os.path.exists(results_path):
-    with open(results_path, "r", encoding="utf-8") as f:
+    with open(results_path, encoding="utf-8") as f:
         extraction_results = json.load(f)
 else:
     st.warning("No extraction results found.")

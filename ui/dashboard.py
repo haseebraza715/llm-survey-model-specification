@@ -4,7 +4,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -33,7 +33,7 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def _coverage_value(report: Dict[str, Any] | None) -> float:
+def _coverage_value(report: dict[str, Any] | None) -> float:
     if not report:
         return 0.0
     return float(
@@ -41,7 +41,7 @@ def _coverage_value(report: Dict[str, Any] | None) -> float:
     )
 
 
-def _chunk_lookup_from_processed(chunks: List[Dict[str, Any]]) -> Dict[str, str]:
+def _chunk_lookup_from_processed(chunks: list[dict[str, Any]]) -> dict[str, str]:
     return {str(c.get("id", "")): str(c.get("text", "")) for c in chunks if c.get("id")}
 
 
@@ -119,7 +119,7 @@ def main() -> None:
         base_url = st.text_input("Base URL", value="https://openrouter.ai/api/v1")
         referer = st.text_input("HTTP Referer (optional)", value="")
         x_title = st.text_input("X-Title (optional)", value="")
-        extra_headers: Dict[str, str] = {}
+        extra_headers: dict[str, str] = {}
         if referer:
             extra_headers["HTTP-Referer"] = referer
         if x_title:
@@ -128,7 +128,6 @@ def main() -> None:
         st.subheader("Retrieval & refinement")
         use_rag = st.checkbox("Use retrieval from indexed survey text", value=True)
         use_literature = st.checkbox("Use literature retrieval (capped at 20 papers)", value=True)
-        num_context_docs = st.slider("Survey context snippets per chunk", 1, 10, 3)
         use_refinement = st.checkbox("Use refinement loop", value=True)
         max_refinement_iterations = st.slider("Max refinement iterations", 1, 5, 2)
         completeness_threshold = st.slider(
@@ -580,7 +579,7 @@ def main() -> None:
                     if not isinstance(rel, dict):
                         continue
                     ev = str(rel.get("evidence_strength", "direct")).lower()
-                    if evidence_filter != "all" and ev != evidence_filter:
+                    if evidence_filter not in {"all", ev}:
                         continue
                     shown += 1
                     css = _evidence_class(ev)

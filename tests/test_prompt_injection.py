@@ -17,7 +17,8 @@ def test_hand_crafted_injection_strings_not_sent_verbatim(payload: str) -> None:
 
 def test_fuzz_twenty_variants_no_verbatim_brace_namespace() -> None:
     """Twenty hand-crafted variants: curly-brace format hijacks must not survive verbatim."""
-    variants = list(injection_payloads_for_tests()) + [
+    variants = [
+        *injection_payloads_for_tests(),
         "{" + "a" * 12 + "}",
         "{{" + "nested" + "}}",
         "format this: {0.__class__}",

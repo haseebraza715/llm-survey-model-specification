@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +33,7 @@ class Variable(BaseModel):
     definition: str = Field(description="Grounded definition from the text.")
     type: VariableType
     example_quote: str = Field(description="Direct supporting quote from the chunk.")
-    source_chunk_ids: List[str] = Field(
+    source_chunk_ids: list[str] = Field(
         default_factory=list,
         description="Chunk id(s) this extraction row was grounded on.",
     )
@@ -51,7 +50,7 @@ class Relationship(BaseModel):
     mechanism: str = Field(description="How/why the relationship occurs.")
     supporting_quote: str
     confidence: float = Field(ge=0.0, le=1.0)
-    source_chunk_ids: List[str] = Field(
+    source_chunk_ids: list[str] = Field(
         default_factory=list,
         description="Chunk id(s) supporting this relationship.",
     )
@@ -64,8 +63,8 @@ class Relationship(BaseModel):
 class Hypothesis(BaseModel):
     id: str = Field(description="Hypothesis id (e.g., H1).")
     statement: str = Field(description="Testable hypothesis statement.")
-    supporting_quotes: List[str] = Field(default_factory=list)
-    source_chunk_ids: List[str] = Field(
+    supporting_quotes: list[str] = Field(default_factory=list)
+    source_chunk_ids: list[str] = Field(
         default_factory=list,
         description="Chunk id(s) for cited quotes.",
     )
@@ -82,9 +81,9 @@ class DetectedGap(BaseModel):
 
 
 class ChunkExtractionResult(BaseModel):
-    variables: List[Variable] = Field(default_factory=list)
-    relationships: List[Relationship] = Field(default_factory=list)
-    hypotheses: List[Hypothesis] = Field(default_factory=list)
-    moderators: List[Variable] = Field(default_factory=list)
-    gaps: List[DetectedGap] = Field(default_factory=list)
-    extraction_notes: Optional[str] = None
+    variables: list[Variable] = Field(default_factory=list)
+    relationships: list[Relationship] = Field(default_factory=list)
+    hypotheses: list[Hypothesis] = Field(default_factory=list)
+    moderators: list[Variable] = Field(default_factory=list)
+    gaps: list[DetectedGap] = Field(default_factory=list)
+    extraction_notes: str | None = None

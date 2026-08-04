@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,7 @@ class TopicAnalyzer:
         self.topic_model = None
         self.keybert_model = None
 
-    def fit_topic_model(self, texts: List[str], save_model: bool = True) -> Tuple[List[int], np.ndarray]:
+    def fit_topic_model(self, texts: list[str], save_model: bool = True) -> tuple[list[int], np.ndarray]:
         """Fit BERTopic model to the texts."""
         print(f"Fitting BERTopic model to {len(texts)} texts...")
         self.topic_model = BERTopic(nr_topics=self.nr_topics, min_topic_size=self.min_topic_size, verbose=True)
@@ -40,7 +40,7 @@ class TopicAnalyzer:
 
         return topics, probs
 
-    def extract_keywords(self, texts: List[str], top_k: int = 10) -> Dict[str, List[Tuple[str, float]]]:
+    def extract_keywords(self, texts: list[str], top_k: int = 10) -> dict[str, list[tuple[str, float]]]:
         """Extract keywords using KeyBERT."""
         print("Extracting keywords using KeyBERT...")
         self.keybert_model = KeyBERT(model=self.embedding_model)
@@ -59,7 +59,7 @@ class TopicAnalyzer:
 
         return keywords
 
-    def analyze_topics(self, texts: List[str], save_results: bool = True) -> Dict[str, Any]:
+    def analyze_topics(self, texts: list[str], save_results: bool = True) -> dict[str, Any]:
         """Perform comprehensive topic analysis."""
         topics, probs = self.fit_topic_model(texts, save_model=save_results)
         keywords = self.extract_keywords(texts)
@@ -92,7 +92,7 @@ class TopicAnalyzer:
 
         return results
 
-    def create_topic_visualizations(self, results: Dict[str, Any], save_plots: bool = True) -> Dict[str, str]:
+    def create_topic_visualizations(self, results: dict[str, Any], save_plots: bool = True) -> dict[str, str]:
         """Create visualizations for topic analysis."""
         topic_info = pd.DataFrame(results["topic_info"])
         fig_dist = px.bar(
@@ -123,7 +123,7 @@ class TopicAnalyzer:
 
         return plot_paths
 
-    def generate_topic_summary(self, results: Dict[str, Any], save_summary: bool = True) -> str:
+    def generate_topic_summary(self, results: dict[str, Any], save_summary: bool = True) -> str:
         """Generate a human-readable summary of the topic analysis."""
         topic_info = pd.DataFrame(results["topic_info"])
         valid_topics = topic_info[topic_info["Topic"] != -1]
@@ -170,7 +170,7 @@ class TopicAnalyzer:
 
         return summary
 
-    def export_topic_data(self, results: Dict[str, Any], output_format: str = "yaml") -> str:
+    def export_topic_data(self, results: dict[str, Any], output_format: str = "yaml") -> str:
         """Export topic analysis results in structured format."""
         export_data = {
             "metadata": {

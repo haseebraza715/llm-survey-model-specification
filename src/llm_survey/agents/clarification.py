@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, ClassVar
 
 from llm_survey.schemas.clarification import (
     AnswerSource,
@@ -14,7 +14,7 @@ from llm_survey.schemas.clarification import (
 class ClarificationAgent:
     """Build clarification plan from cross-chunk gaps and literature context."""
 
-    _PRIORITY_ORDER = {
+    _PRIORITY_ORDER: ClassVar[dict[str, int]] = {
         ClarificationPriority.HIGH.value: 0,
         ClarificationPriority.MEDIUM.value: 1,
         ClarificationPriority.LOW.value: 2,
@@ -22,13 +22,13 @@ class ClarificationAgent:
 
     def build_plan(
         self,
-        gap_report: Dict[str, Any],
+        gap_report: dict[str, Any],
         literature_store: Any | None = None,
         auto_answer_top_k: int = 3,
     ) -> ClarificationPlan:
         raw_gaps = list(gap_report.get("gaps", []))
-        questions: List[ClarificationQuestion] = []
-        auto_answers: List[ClarificationAnswer] = []
+        questions: list[ClarificationQuestion] = []
+        auto_answers: list[ClarificationAnswer] = []
 
         for idx, gap in enumerate(raw_gaps, start=1):
             description = str(gap.get("description", "")).strip()
@@ -92,8 +92,8 @@ class ClarificationAgent:
         if not matches:
             return None
 
-        supporting_references: List[str] = []
-        distilled_points: List[str] = []
+        supporting_references: list[str] = []
+        distilled_points: list[str] = []
 
         for match in matches[:top_k]:
             metadata = match.get("metadata", {}) or {}
@@ -123,7 +123,7 @@ class ClarificationAgent:
             supporting_references=self._dedupe_keep_order(supporting_references),
         )
 
-    def _route_answer_source(self, gap: Dict[str, Any], literature_store: Any | None, question_text: str) -> AnswerSource:
+    def _route_answer_source(self, gap: dict[str, Any], literature_store: Any | None, question_text: str) -> AnswerSource:
         gap_type = str(gap.get("gap_type", "")).strip().lower()
         priority = str(gap.get("priority", "medium")).strip().lower()
 
@@ -148,7 +148,7 @@ class ClarificationAgent:
         return AnswerSource.EITHER if literature_available else AnswerSource.RESEARCHER
 
     @staticmethod
-    def _build_context(gap: Dict[str, Any]) -> str:
+    def _build_context(gap: dict[str, Any]) -> str:
         affected = gap.get("affected_hypotheses") or []
         affected_text = ", ".join(str(h) for h in affected if str(h).strip())
         base = str(gap.get("description", "")).strip()
@@ -174,8 +174,8 @@ class ClarificationAgent:
 
     @staticmethod
     def _can_proceed_with_literature(
-        questions: List[ClarificationQuestion],
-        auto_answers: List[ClarificationAnswer],
+        questions: list[ClarificationQuestion],
+        auto_answers: list[ClarificationAnswer],
     ) -> bool:
         if not questions:
             return True
@@ -191,9 +191,9 @@ class ClarificationAgent:
         return True
 
     @staticmethod
-    def _dedupe_keep_order(values: List[str]) -> List[str]:
+    def _dedupe_keep_order(values: list[str]) -> list[str]:
         seen = set()
-        output: List[str] = []
+        output: list[str] = []
         for value in values:
             key = value.strip().lower()
             if not key or key in seen:

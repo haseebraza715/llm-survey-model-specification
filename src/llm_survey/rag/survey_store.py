@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import chromadb
 
@@ -21,8 +21,8 @@ class SurveyStore:
         self.embedder = embedder or CachedEmbedder()
 
     @staticmethod
-    def _to_chroma_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
-        output: Dict[str, Any] = {}
+    def _to_chroma_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+        output: dict[str, Any] = {}
         for key, value in metadata.items():
             if value is None:
                 continue
@@ -32,11 +32,11 @@ class SurveyStore:
                 output[key] = str(value)
         return output
 
-    def add_chunks(self, chunks: List[Dict[str, Any]]) -> Dict[str, int]:
+    def add_chunks(self, chunks: list[dict[str, Any]]) -> dict[str, int]:
         """Add chunks to store, skipping already-seen content hashes."""
-        new_ids: List[str] = []
-        new_docs: List[str] = []
-        new_metadatas: List[Dict[str, Any]] = []
+        new_ids: list[str] = []
+        new_docs: list[str] = []
+        new_metadatas: list[dict[str, Any]] = []
         queued_ids: set[str] = set()
 
         skipped = 0
@@ -70,10 +70,10 @@ class SurveyStore:
         self,
         text: str,
         k: int = 5,
-        filter_metadata: Dict[str, Any] | None = None,
-    ) -> List[Dict[str, Any]]:
+        filter_metadata: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         embedding = self.embedder.embed(text)
-        query_kwargs: Dict[str, Any] = {
+        query_kwargs: dict[str, Any] = {
             "query_embeddings": [embedding],
             "n_results": max(1, k),
             "include": ["documents", "metadatas", "distances"],
@@ -87,8 +87,8 @@ class SurveyStore:
         metadatas = result.get("metadatas", [[]])[0]
         distances = result.get("distances", [[]])[0]
 
-        matches: List[Dict[str, Any]] = []
-        for doc, metadata, distance in zip(documents, metadatas, distances):
+        matches: list[dict[str, Any]] = []
+        for doc, metadata, distance in zip(documents, metadatas, distances, strict=True):
             matches.append({"text": doc, "metadata": metadata or {}, "distance": distance})
         return matches
 

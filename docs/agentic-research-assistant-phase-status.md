@@ -1,5 +1,8 @@
 # Agentic Research Assistant — Phase Status Tracker
 
+> **Archived status snapshot.** The statuses below were recorded on the stated
+> date and are not current release guidance. See README and NEXT_STEPS.
+
 Last updated: 2026-04-21
 
 Status legend:

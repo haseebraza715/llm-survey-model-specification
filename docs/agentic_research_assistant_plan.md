@@ -1,5 +1,8 @@
 # Agentic Research Assistant — Full Implementation Plan
 
+> **Archived planning snapshot.** Features, costs, and timelines below are
+> proposals unless a current versioned artifact proves otherwise.
+
 > Turns raw qualitative data (surveys, interviews, transcripts) into structured, validated, citation-linked scientific model specifications using an iterative multi-agent loop.
 
 ---
