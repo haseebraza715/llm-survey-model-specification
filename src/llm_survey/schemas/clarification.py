@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -31,11 +30,11 @@ class ClarificationAnswer(BaseModel):
     question_id: str
     answer_source: AnswerSource
     answer_text: str
-    supporting_references: List[str] = Field(default_factory=list)
+    supporting_references: list[str] = Field(default_factory=list)
 
 
 class ClarificationPlan(BaseModel):
-    questions: List[ClarificationQuestion] = Field(default_factory=list)
+    questions: list[ClarificationQuestion] = Field(default_factory=list)
     estimated_new_data_needed: bool
     can_proceed_with_literature: bool
-    auto_answers: List[ClarificationAnswer] = Field(default_factory=list)
+    auto_answers: list[ClarificationAnswer] = Field(default_factory=list)

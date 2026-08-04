@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -22,18 +21,18 @@ class GapPriority(str, Enum):
 class CrossChunkGap(BaseModel):
     gap_type: GapType
     description: str
-    affected_hypotheses: List[str] = Field(default_factory=list)
+    affected_hypotheses: list[str] = Field(default_factory=list)
     frequency: int = Field(ge=1)
     priority: GapPriority
     suggested_follow_up: str
 
 
 class CrossChunkGapReport(BaseModel):
-    gaps: List[CrossChunkGap] = Field(default_factory=list)
+    gaps: list[CrossChunkGap] = Field(default_factory=list)
     structural_coverage_score: float = Field(
         ge=0.0,
         le=1.0,
         description="Heuristic ratio of filled schema fields vs gap penalties; not theoretical validity.",
     )
     model_testability_score: float = Field(ge=0.0, le=1.0)
-    priority_gaps: List[str] = Field(default_factory=list)
+    priority_gaps: list[str] = Field(default_factory=list)

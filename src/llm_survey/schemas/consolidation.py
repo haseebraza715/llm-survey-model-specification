@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -37,13 +36,13 @@ class PaperStance(str, Enum):
 
 class MergedVariable(BaseModel):
     name: str
-    aliases: List[str] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list)
     definition: str
     type: VariableType
     chunk_frequency: int = Field(ge=0, default=0)
     confidence: float = Field(ge=0.0, le=1.0)
-    source_chunk_ids: List[str] = Field(default_factory=list)
-    supporting_quotes: List[str] = Field(default_factory=list)
+    source_chunk_ids: list[str] = Field(default_factory=list)
+    supporting_quotes: list[str] = Field(default_factory=list)
     evidence_strength: EvidenceStrength = Field(default=EvidenceStrength.DIRECT)
 
 
@@ -55,9 +54,9 @@ class ConsolidatedRelationship(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     support_count: int = Field(ge=0, default=0)
     support_fraction: float = Field(ge=0.0, le=1.0, default=0.0)
-    source_chunk_ids: List[str] = Field(default_factory=list)
-    supporting_quotes: List[str] = Field(default_factory=list)
-    contradicting_quotes: List[str] = Field(default_factory=list)
+    source_chunk_ids: list[str] = Field(default_factory=list)
+    supporting_quotes: list[str] = Field(default_factory=list)
+    contradicting_quotes: list[str] = Field(default_factory=list)
     evidence_strength: EvidenceStrength = Field(default=EvidenceStrength.DIRECT)
 
 
@@ -67,10 +66,10 @@ class ScoredHypothesis(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     support_count: int = Field(ge=0, default=0)
     support_fraction: float = Field(ge=0.0, le=1.0, default=0.0)
-    source_chunk_ids: List[str] = Field(default_factory=list)
-    supporting_quotes: List[str] = Field(default_factory=list)
-    contradicting_quotes: List[str] = Field(default_factory=list)
-    linked_relationships: List[str] = Field(default_factory=list)
+    source_chunk_ids: list[str] = Field(default_factory=list)
+    supporting_quotes: list[str] = Field(default_factory=list)
+    contradicting_quotes: list[str] = Field(default_factory=list)
+    linked_relationships: list[str] = Field(default_factory=list)
     from_variable: str = ""
     to_variable: str = ""
     direction: RelationshipDirection = Field(default=RelationshipDirection.UNCLEAR)
@@ -85,8 +84,8 @@ class ModeratorSpec(BaseModel):
     name: str
     target_relationship: str = ""
     rationale: str = ""
-    source_chunk_ids: List[str] = Field(default_factory=list)
-    supporting_quotes: List[str] = Field(default_factory=list)
+    source_chunk_ids: list[str] = Field(default_factory=list)
+    supporting_quotes: list[str] = Field(default_factory=list)
 
 
 class Contradiction(BaseModel):
@@ -103,7 +102,7 @@ class Contradiction(BaseModel):
 class PaperReference(BaseModel):
     paper_id: str
     title: str
-    authors: List[str] = Field(default_factory=list)
+    authors: list[str] = Field(default_factory=list)
     year: int | None = None
     citation_count: int = 0
     relevant_excerpt: str = ""
@@ -113,34 +112,34 @@ class PaperReference(BaseModel):
 class HypothesisValidation(BaseModel):
     hypothesis_id: str
     hypothesis_statement: str
-    supporting_papers: List[PaperReference] = Field(default_factory=list)
-    contradicting_papers: List[PaperReference] = Field(default_factory=list)
-    partial_papers: List[PaperReference] = Field(default_factory=list)
+    supporting_papers: list[PaperReference] = Field(default_factory=list)
+    contradicting_papers: list[PaperReference] = Field(default_factory=list)
+    partial_papers: list[PaperReference] = Field(default_factory=list)
     literature_support_score: float = Field(ge=0.0, le=1.0, default=0.0)
     consensus_strength: ConsensusStrength = Field(default=ConsensusStrength.WEAK)
     novelty_flag: bool = False
 
 
 class ConflictReport(BaseModel):
-    contradictions: List[Contradiction] = Field(default_factory=list)
+    contradictions: list[Contradiction] = Field(default_factory=list)
     resolved_count: int = 0
     partially_resolved_count: int = 0
     unresolved_count: int = 0
 
 
 class LiteratureValidationReport(BaseModel):
-    validations: List[HypothesisValidation] = Field(default_factory=list)
+    validations: list[HypothesisValidation] = Field(default_factory=list)
     strong_support_count: int = 0
     contested_count: int = 0
     novelty_count: int = 0
 
 
 class ConsolidatedModel(BaseModel):
-    variables: List[MergedVariable] = Field(default_factory=list)
-    relationships: List[ConsolidatedRelationship] = Field(default_factory=list)
-    hypotheses: List[ScoredHypothesis] = Field(default_factory=list)
-    moderators: List[ModeratorSpec] = Field(default_factory=list)
-    contradictions: List[Contradiction] = Field(default_factory=list)
+    variables: list[MergedVariable] = Field(default_factory=list)
+    relationships: list[ConsolidatedRelationship] = Field(default_factory=list)
+    hypotheses: list[ScoredHypothesis] = Field(default_factory=list)
+    moderators: list[ModeratorSpec] = Field(default_factory=list)
+    contradictions: list[Contradiction] = Field(default_factory=list)
     model_summary: str = ""
-    research_questions: List[str] = Field(default_factory=list)
+    research_questions: list[str] = Field(default_factory=list)
     overall_confidence: float = Field(ge=0.0, le=1.0, default=0.0)

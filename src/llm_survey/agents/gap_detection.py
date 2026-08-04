@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Set, Tuple
+from typing import Any, ClassVar
 
 from llm_survey.schemas.gap import CrossChunkGap, CrossChunkGapReport, GapPriority, GapType
 
@@ -11,28 +12,28 @@ class _GapAccumulator:
     gap_type: GapType
     description: str
     frequency: int
-    affected_hypotheses: Set[str]
+    affected_hypotheses: set[str]
     suggested_follow_up: str
 
 
 class CrossChunkGapDetector:
     """Deterministic cross-chunk gap detection and scoring."""
 
-    _GAP_WEIGHTS = {
+    _GAP_WEIGHTS: ClassVar[dict[GapType, float]] = {
         GapType.MISSING_VARIABLE: 1.0,
         GapType.NO_MEASUREMENT: 0.9,
         GapType.MISSING_MECHANISM: 0.8,
         GapType.AMBIGUOUS_DIRECTION: 0.7,
     }
 
-    _TESTABILITY_WEIGHTS = {
+    _TESTABILITY_WEIGHTS: ClassVar[dict[GapType, float]] = {
         GapType.NO_MEASUREMENT: 1.0,
         GapType.AMBIGUOUS_DIRECTION: 0.85,
         GapType.MISSING_VARIABLE: 0.8,
         GapType.MISSING_MECHANISM: 0.7,
     }
 
-    def detect(self, extraction_results: List[Dict[str, Any]]) -> CrossChunkGapReport:
+    def detect(self, extraction_results: list[dict[str, Any]]) -> CrossChunkGapReport:
         successful = [r for r in extraction_results if r.get("success") and isinstance(r.get("model"), dict)]
         total_chunks = len(successful)
         if total_chunks == 0:
@@ -45,7 +46,7 @@ class CrossChunkGapDetector:
 
         global_variable_names = self._collect_global_variable_names(successful)
 
-        buckets: Dict[Tuple[str, str], _GapAccumulator] = {}
+        buckets: dict[tuple[str, str], _GapAccumulator] = {}
 
         for result in successful:
             model = result.get("model") or {}
@@ -87,8 +88,8 @@ class CrossChunkGapDetector:
             priority_gaps=priority_gaps,
         )
 
-    def _collect_global_variable_names(self, successful_results: List[Dict[str, Any]]) -> Set[str]:
-        names: Set[str] = set()
+    def _collect_global_variable_names(self, successful_results: list[dict[str, Any]]) -> set[str]:
+        names: set[str] = set()
         for result in successful_results:
             model = result.get("model") or {}
             for variable in model.get("variables", []):
@@ -99,11 +100,11 @@ class CrossChunkGapDetector:
 
     def _ingest_explicit_gaps(
         self,
-        buckets: Dict[Tuple[str, str], _GapAccumulator],
-        gaps: Iterable[Dict[str, Any]],
-        hypotheses: List[str],
+        buckets: dict[tuple[str, str], _GapAccumulator],
+        gaps: Iterable[dict[str, Any]],
+        hypotheses: list[str],
     ) -> None:
-        seen_keys: Set[Tuple[str, str]] = set()
+        seen_keys: set[tuple[str, str]] = set()
         for gap in gaps or []:
             description = str(gap.get("description", "")).strip()
             why = str(gap.get("why_it_matters", "")).strip()
@@ -127,11 +128,11 @@ class CrossChunkGapDetector:
 
     def _ingest_relationship_gaps(
         self,
-        buckets: Dict[Tuple[str, str], _GapAccumulator],
-        relationships: Iterable[Dict[str, Any]],
-        local_variables: Set[str],
-        global_variables: Set[str],
-        hypotheses: List[str],
+        buckets: dict[tuple[str, str], _GapAccumulator],
+        relationships: Iterable[dict[str, Any]],
+        local_variables: set[str],
+        global_variables: set[str],
+        hypotheses: list[str],
     ) -> None:
         for rel in relationships or []:
             from_var = str(rel.get("from_variable", "")).strip().lower()
@@ -175,8 +176,8 @@ class CrossChunkGapDetector:
 
     def _ingest_hypothesis_gaps(
         self,
-        buckets: Dict[Tuple[str, str], _GapAccumulator],
-        hypotheses: Iterable[Dict[str, Any]],
+        buckets: dict[tuple[str, str], _GapAccumulator],
+        hypotheses: Iterable[dict[str, Any]],
     ) -> None:
         for hyp in hypotheses or []:
             hyp_id = str(hyp.get("id", "")).strip() or "unknown_hypothesis"
@@ -195,11 +196,11 @@ class CrossChunkGapDetector:
 
     def _add_gap(
         self,
-        buckets: Dict[Tuple[str, str], _GapAccumulator],
+        buckets: dict[tuple[str, str], _GapAccumulator],
         gap_type: GapType,
         description: str,
         follow_up: str,
-        hypotheses: List[str],
+        hypotheses: list[str],
     ) -> None:
         normalized_description = self._normalize_text(description)
         key = (gap_type.value, normalized_description)
@@ -242,7 +243,7 @@ class CrossChunkGapDetector:
             return GapPriority.MEDIUM
         return GapPriority.LOW
 
-    def _score_completeness(self, gaps: List[CrossChunkGap], total_chunks: int) -> float:
+    def _score_completeness(self, gaps: list[CrossChunkGap], total_chunks: int) -> float:
         if total_chunks <= 0:
             return 0.0
 
@@ -254,7 +255,7 @@ class CrossChunkGapDetector:
         score = 1.0 - min(1.0, weighted_sum / max_possible)
         return round(max(0.0, min(1.0, score)), 3)
 
-    def _score_testability(self, gaps: List[CrossChunkGap], total_chunks: int) -> float:
+    def _score_testability(self, gaps: list[CrossChunkGap], total_chunks: int) -> float:
         if total_chunks <= 0:
             return 0.0
 
