@@ -18,6 +18,8 @@ results_*/
 
 # Environment
 .env
+data/chroma/
+data/chroma_smoke/
 .env.local
 
 # IDE

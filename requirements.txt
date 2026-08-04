@@ -1,9 +1,6 @@
 # Pinned for reproducible demos (HF Space / CI). Upgrade deliberately.
 openai==1.59.8
 instructor==1.7.2
-llama-index-core==0.12.8
-llama-index-vector-stores-chroma==0.4.1
-llama-index-embeddings-huggingface==0.5.0
 sentence-transformers==3.3.1
 chromadb==0.5.23
 diskcache==5.6.3
@@ -21,7 +18,6 @@ pydantic==2.10.6
 streamlit==1.41.1
 plotly==5.24.1
 python-dotenv==1.0.1
-tqdm==4.67.1
 tiktoken==0.8.0
 pillow==10.4.0
 huggingface_hub==0.26.2
