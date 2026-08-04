@@ -99,4 +99,4 @@ jobs:
         # Auto-discovery on purpose: no test-file allowlist. Every offline test
         # added under tests/ is collected automatically; only tests explicitly
         # marked live_api (network + credentials) are excluded.
-        run: PYTHONPATH=src pytest -m "not live_api" -q
+        run: PYTHONPATH=.:src pytest -m "not live_api" -q
