@@ -5,11 +5,12 @@ Main entry point for the pipeline
 """
 from __future__ import annotations
 
-import os
 import argparse
 import json
+import os
 import sys
-from typing import Any, Dict
+from typing import Any
+
 from dotenv import load_dotenv
 
 # When running from a source checkout without `pip install -e .`, ensure the
@@ -22,7 +23,6 @@ except ModuleNotFoundError:
 # Load environment variables
 load_dotenv()
 
-from llm_survey.rag_pipeline import RAGModelExtractor
 
 # Import TopicAnalyzer only when needed
 def get_topic_analyzer():
@@ -42,12 +42,12 @@ def run_complete_pipeline(
     output_dir: str = "outputs",
     llm_model: str = "google/gemma-4-31b-it",
     base_url: str = "https://openrouter.ai/api/v1",
-    extra_headers: Dict[str, str] | None = None,
+    extra_headers: dict[str, str] | None = None,
     enable_literature_retrieval: bool = True,
     enable_refinement_loop: bool = True,
     max_refinement_iterations: int = 2,
     completeness_threshold: float = 0.75,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run the complete pipeline from data processing to model extraction.
     
@@ -62,6 +62,8 @@ def run_complete_pipeline(
         Dictionary containing all results
     """
     
+    from llm_survey.rag_pipeline import RAGModelExtractor
+
     print("Starting LLM Model Specification Pipeline")
     print("=" * 50)
     
@@ -169,7 +171,7 @@ def run_complete_pipeline(
             print(f"Created {len(plot_paths)} visualizations")
             
             # Generate summary
-            summary = topic_analyzer.generate_topic_summary(topic_results)
+            topic_analyzer.generate_topic_summary(topic_results)
             print("Generated topic summary")
         else:
             print("Topic analysis skipped due to dependency issues")
@@ -257,7 +259,6 @@ def run_complete_pipeline(
         )
     
     if topic_results:
-        topic_info = topic_results['model_info']
         print(f"Topics identified: {len([t for t in topic_results['topic_info'] if t['Topic'] != -1])}")
     
     print(f"Results saved to: {output_dir}")
@@ -303,7 +304,7 @@ def run_interactive_mode():
     
     # Run pipeline
     try:
-        results = run_complete_pipeline(
+        run_complete_pipeline(
             input_file=input_file,
             openrouter_api_key=api_key,
             use_rag=use_rag,
@@ -316,7 +317,7 @@ def run_interactive_mode():
         print("\nPipeline completed successfully!")
         
     except Exception as e:
-        print(f"\nError running pipeline: {str(e)}")
+        print(f"\nError running pipeline: {e!s}")
 
 def create_sample_data() -> None:
     """Print the path to the bundled synthetic survey (preferred sample for demos)."""
@@ -368,13 +369,13 @@ def main():
         return
     
     try:
-        extra_headers: Dict[str, str] = {}
+        extra_headers: dict[str, str] = {}
         if args.http_referer:
             extra_headers["HTTP-Referer"] = args.http_referer
         if args.x_title:
             extra_headers["X-Title"] = args.x_title
 
-        results = run_complete_pipeline(
+        run_complete_pipeline(
             input_file=args.input,
             openrouter_api_key=args.api_key,
             use_rag=not args.no_rag,
@@ -391,7 +392,7 @@ def main():
         print("\nPipeline completed successfully!")
         
     except Exception as e:
-        print(f"\nError running pipeline: {str(e)}")
+        print(f"\nError running pipeline: {e!s}")
 
 if __name__ == "__main__":
     main() 
