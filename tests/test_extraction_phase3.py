@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import instructor
 import pytest
@@ -8,7 +8,7 @@ from llm_survey.schemas.extraction import ChunkExtractionResult
 
 
 class FakeCompletions:
-    def create(self, **kwargs: Dict[str, Any]) -> ChunkExtractionResult:
+    def create(self, **kwargs: dict[str, Any]) -> ChunkExtractionResult:
         return ChunkExtractionResult(
             variables=[
                 {

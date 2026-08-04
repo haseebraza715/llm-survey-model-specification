@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 from llm_survey.utils.preprocess import chunk_text, deduplicate_records, load_file, process_survey_data
 

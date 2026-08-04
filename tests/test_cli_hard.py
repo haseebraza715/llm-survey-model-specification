@@ -16,6 +16,7 @@ def test_main_help_runs() -> None:
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert r.returncode == 0
     assert "input" in r.stdout.lower() or "--input" in r.stdout
@@ -28,6 +29,7 @@ def test_main_missing_input_prints_help() -> None:
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert r.returncode == 0
     combined = (r.stdout + r.stderr).lower()
@@ -41,6 +43,7 @@ def test_main_rejects_missing_file() -> None:
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert r.returncode == 0
     assert "not found" in (r.stdout + r.stderr).lower()
@@ -53,6 +56,7 @@ def test_create_sample_cli_prints_path() -> None:
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert r.returncode == 0
     assert "synthetic_workplace_survey" in r.stdout or ".csv" in r.stdout
@@ -65,6 +69,7 @@ def test_compute_eval_metrics_script_runs() -> None:
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert r.returncode == 0
     body = r.stdout
