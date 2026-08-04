@@ -36,6 +36,7 @@ def get_topic_analyzer():
 
 def run_complete_pipeline(
     input_file: str,
+    *,
     openrouter_api_key: str = "",
     use_rag: bool = True,
     perform_topic_analysis: bool = True,

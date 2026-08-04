@@ -101,6 +101,7 @@ class RAGModelExtractor:
     def __init__(
         self,
         openai_api_key: str = "",
+        *,
         llm_model: str = "google/gemma-4-31b-it",
         embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
         base_url: str = "https://openrouter.ai/api/v1",
@@ -386,6 +387,7 @@ class RAGModelExtractor:
     def extract_model_from_chunk(
         self,
         chunk_text: str,
+        *,
         use_rag: bool = True,
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
@@ -506,6 +508,7 @@ class RAGModelExtractor:
 
     def extract_models_from_all_chunks(
         self,
+        *,
         use_rag: bool = True,
         num_context_docs: int = 3,
         num_literature_docs: int = 3,
@@ -674,6 +677,7 @@ class RAGModelExtractor:
     def export_final_outputs(
         self,
         consolidated_model: dict[str, Any],
+        *,
         conflict_report: dict[str, Any] | None = None,
         validation_report: dict[str, Any] | None = None,
         total_chunks: int = 0,
@@ -737,6 +741,7 @@ class RAGModelExtractor:
     def finalize_model_outputs(
         self,
         extraction_results: list[dict[str, Any]],
+        *,
         gap_report: dict[str, Any],
         clarification_plan: dict[str, Any],
         refinement_report: dict[str, Any] | None = None,
@@ -826,6 +831,7 @@ class RAGModelExtractor:
     def run_refinement_loop(
         self,
         extraction_results: list[dict[str, Any]],
+        *,
         gap_report: dict[str, Any],
         clarification_plan: dict[str, Any],
         use_rag: bool = True,
