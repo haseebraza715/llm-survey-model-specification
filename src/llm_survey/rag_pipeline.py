@@ -51,7 +51,11 @@ from llm_survey.utils.preprocess import (
     save_processed_data,
     save_processed_data_for_run,
 )
-from llm_survey.utils.prompt_safety import build_refinement_user_message, build_thematic_analysis_user_message
+from llm_survey.utils.prompt_safety import (
+    build_refinement_user_message,
+    build_thematic_analysis_user_message,
+    sanitize_user_derived_text,
+)
 
 
 def _inject_provenance(model: dict[str, Any], chunk_id: str) -> None:
@@ -415,7 +419,8 @@ class RAGModelExtractor:
             literature_context=literature_context,
         )
         if chunk_id:
-            prompt = f"{prompt}\n\nExtraction metadata:\nchunk_id: {chunk_id}\n"
+            safe_chunk_id = sanitize_user_derived_text(chunk_id, max_length=256)
+            prompt = f"{prompt}\n\nExtraction metadata:\nchunk_id: {safe_chunk_id}\n"
 
         base_out: dict[str, Any] = {
             "survey_context": survey_context,
