@@ -305,7 +305,7 @@ def build_mermaid_diagram(consolidated_model: Mapping[str, Any] | Any) -> str:
         to_name = str(row.get("to_variable", "")).replace(" ", "")
         if not from_name or not to_name:
             continue
-        label = f"{row.get('direction', 'unclear')}, conf:{float(row.get('confidence', 0.0)):.2f}"
+        label = f"{row.get('direction', 'unclear')}, conf:{float(row.get('confidence', 0.0)):.2f}".replace('"', "'")
         lines.append(f'    {from_name} -->|"{label}"| {to_name}')
     return "\n".join(lines)
 
@@ -322,12 +322,13 @@ def build_causal_graph_html(
 
     relationship_cards: list[str] = []
     for row in model.get("relationships", []):
-        quotes = "".join(f"<li>{quote}</li>" for quote in row.get("supporting_quotes", [])[:4])
+        quotes = "".join(f"<li>{html.escape(str(quote))}</li>" for quote in row.get("supporting_quotes", [])[:4])
         relationship_cards.append(
             "<details>"
-            f"<summary><strong>{row.get('from_variable')}</strong> → <strong>{row.get('to_variable')}</strong> "
-            f"({row.get('direction')}, conf {float(row.get('confidence', 0.0)):.2f})</summary>"
-            f"<p>{row.get('mechanism', '')}</p>"
+            f"<summary><strong>{html.escape(str(row.get('from_variable')))}</strong> → "
+            f"<strong>{html.escape(str(row.get('to_variable')))}</strong> "
+            f"({html.escape(str(row.get('direction')))}, conf {float(row.get('confidence', 0.0)):.2f})</summary>"
+            f"<p>{html.escape(str(row.get('mechanism', '')))}</p>"
             f"<p>Support: {row.get('support_count', 0)} chunks ({float(row.get('support_fraction', 0.0)):.2f})</p>"
             f"<ul>{quotes}</ul>"
             "</details>"
@@ -338,16 +339,17 @@ def build_causal_graph_html(
         validation = validation_by_id.get(str(row.get("id", "")), {})
         hypothesis_cards.append(
             "<details>"
-            f"<summary>{row.get('id')}: {row.get('statement')}</summary>"
+            f"<summary>{html.escape(str(row.get('id')))}: {html.escape(str(row.get('statement')))}</summary>"
             f"<p>Confidence: {float(row.get('confidence', 0.0)):.2f}</p>"
-            f"<p>Literature: {validation.get('consensus_strength', row.get('consensus_strength', 'weak'))} "
+            f"<p>Literature: {html.escape(str(validation.get('consensus_strength', row.get('consensus_strength', 'weak'))))} "
             f"(score {float(validation.get('literature_support_score', row.get('literature_support_score', 0.0))):.2f})</p>"
             "</details>"
         )
 
     conflict_cards = "".join(
         "<li>"
-        f"{row.get('relationship')}: {row.get('resolution_status')} — {row.get('resolution_explanation')}"
+        f"{html.escape(str(row.get('relationship')))}: {html.escape(str(row.get('resolution_status')))} "
+        f"— {html.escape(str(row.get('resolution_explanation')))}"
         "</li>"
         for row in conflicts
     ) or "<li>No contradictions detected.</li>"
@@ -368,7 +370,7 @@ def build_causal_graph_html(
 </head>
 <body>
   <h1>Consolidated Causal Graph</h1>
-  <p>{model.get("model_summary", "")}</p>
+  <p>{html.escape(str(model.get("model_summary", "")))}</p>
   <div class="grid">
     <section class="panel">
       <div class="mermaid">
