@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,19 @@ except Exception:  # pragma: no cover - matcher is optional
 
 def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _bootstrap_seed() -> int:
+    """RNG seed for bootstrap CIs — honors `LLM_SEED`/Settings, default 20260101."""
+    try:
+        from llm_survey.config import get_settings
+
+        return int(get_settings().seed)
+    except Exception:  # pragma: no cover - settings are optional for the eval
+        try:
+            return int(os.environ.get("LLM_SEED", "20260101"))
+        except ValueError:
+            return 20260101
 
 
 def _iter_relationships(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -137,7 +151,10 @@ def evaluate(extractions: list[dict[str, Any]], gold_doc: dict[str, Any]) -> dic
             )
         for _ in false_positives:
             outcome_rows.append({"gold": False, "predicted": True, "match": False})
-        result["bootstrap_ci_95"] = bootstrap_prf1(outcome_rows, n_resamples=1000, seed=20260101)
+        # `LLM_SEED` (Settings.seed, default 20260101) drives the bootstrap RNG;
+        # any fixed value keeps `make eval` byte-deterministic across runs.
+        seed = _bootstrap_seed()
+        result["bootstrap_ci_95"] = bootstrap_prf1(outcome_rows, n_resamples=1000, seed=seed)
 
     # Per-chunk variance: group outcomes by chunk_id and compute precision/recall per chunk.
     if per_document_variance is not None:
