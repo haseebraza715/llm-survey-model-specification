@@ -6,7 +6,7 @@ date: 2026-05-06
 intended_model: any-instruct-tuned
 change_rationale: |
   RAG-enhanced extraction prompt used when survey + literature context is
-  available. Mirrors `RAG_ENHANCED_PROMPT` in model_extraction_prompts.py —
+  available. Mirrors `RAG_ENHANCED_PROMPT` in model_extraction_prompts.py:
   no semantic change.
 eval_delta: null
 ---

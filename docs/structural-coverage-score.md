@@ -17,4 +17,4 @@ So the score answers a narrow engineering question: **given the extraction schem
 - Not a substitute for reading participant text.
 - Not comparable across different corpora or chunking settings without re-interpretation.
 
-If more than a small fraction of chunks failed extraction (`api_error`, `parse_error`, or `empty_extraction`), treat the score as **unreliable** — the denominator of “successful” chunks changed.
+If more than a small fraction of chunks failed extraction (`api_error`, `parse_error`, or `empty_extraction`), treat the score as **unreliable**: the denominator of “successful” chunks changed.

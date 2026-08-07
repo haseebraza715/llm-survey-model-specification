@@ -1,4 +1,4 @@
-# Agentic Research Assistant — Full Implementation Plan
+# Agentic Research Assistant - Full Implementation Plan
 
 > **Archived planning snapshot.** Features, costs, and timelines below are
 > proposals unless a current versioned artifact proves otherwise.
@@ -12,17 +12,17 @@
 1. [Project Overview](#1-project-overview)
 2. [Full Tech Stack](#2-full-tech-stack)
 3. [Repository Structure](#3-repository-structure)
-4. [Phase 1 — Ingestion & Preprocessing](#4-phase-1--ingestion--preprocessing)
-5. [Phase 2 — Dual RAG Store](#5-phase-2--dual-rag-store)
-6. [Phase 3 — Extraction Agent](#6-phase-3--extraction-agent)
-7. [Phase 4 — Gap Detection Agent](#7-phase-4--gap-detection-agent)
-8. [Phase 5 — Clarification Agent](#8-phase-5--clarification-agent)
-9. [Phase 6 — Re-Extraction & Refinement Loop](#9-phase-6--re-extraction--refinement-loop)
-10. [Phase 7 — Consolidation Agent](#10-phase-7--consolidation-agent)
-11. [Phase 8 — Conflict Detection & Resolution](#11-phase-8--conflict-detection--resolution)
-12. [Phase 9 — Literature Validation Agent](#12-phase-9--literature-validation-agent)
-13. [Phase 10 — Human-in-the-Loop UI](#13-phase-10--human-in-the-loop-ui)
-14. [Phase 11 — Final Output & Export](#14-phase-11--final-output--export)
+4. [Phase 1: Ingestion & Preprocessing](#4-phase-1--ingestion--preprocessing)
+5. [Phase 2: Dual RAG Store](#5-phase-2--dual-rag-store)
+6. [Phase 3: Extraction Agent](#6-phase-3--extraction-agent)
+7. [Phase 4: Gap Detection Agent](#7-phase-4--gap-detection-agent)
+8. [Phase 5: Clarification Agent](#8-phase-5--clarification-agent)
+9. [Phase 6: Re-Extraction & Refinement Loop](#9-phase-6--re-extraction--refinement-loop)
+10. [Phase 7: Consolidation Agent](#10-phase-7--consolidation-agent)
+11. [Phase 8: Conflict Detection & Resolution](#11-phase-8--conflict-detection--resolution)
+12. [Phase 9: Literature Validation Agent](#12-phase-9--literature-validation-agent)
+13. [Phase 10: Human-in-the-Loop UI](#13-phase-10--human-in-the-loop-ui)
+14. [Phase 11: Final Output & Export](#14-phase-11--final-output--export)
 15. [Agent Orchestration Layer](#15-agent-orchestration-layer)
 16. [Caching & Cost Management](#16-caching--cost-management)
 17. [Evaluation & Testing](#17-evaluation--testing)
@@ -35,13 +35,13 @@
 
 ### What It Does
 
-The Agentic Research Assistant takes qualitative text data — surveys, interviews, focus group transcripts — and extracts a formal, structured scientific model from it. The model contains:
+The Agentic Research Assistant takes qualitative text data (surveys, interviews, focus group transcripts) and extracts a formal, structured scientific model from it. The model contains:
 
-- **Variables** — the key constructs mentioned (e.g. Workload, Stress, Autonomy)
-- **Relationships** — directional, signed causal links between variables (e.g. Workload → Stress, positive)
-- **Hypotheses** — testable propositions grounded in the data
-- **Confidence scores** — how strongly each element is supported across the dataset
-- **Literature backing** — citations from academic papers that support or contradict each hypothesis
+- **Variables**: the key constructs mentioned (e.g. Workload, Stress, Autonomy)
+- **Relationships**: directional, signed causal links between variables (e.g. Workload → Stress, positive)
+- **Hypotheses**: testable propositions grounded in the data
+- **Confidence scores**: how strongly each element is supported across the dataset
+- **Literature backing**: citations from academic papers that support or contradict each hypothesis
 
 ### What Makes It Agentic
 
@@ -56,11 +56,11 @@ Each agent is a dedicated LLM call with a specific role and a well-defined input
 
 ### Key Design Principles
 
-- **Structured outputs only** — no raw YAML parsing; use function calling / instructor library for typed outputs
-- **Dual RAG context** — every extraction is grounded in both peer responses AND research literature
-- **Confidence scoring** — every element carries a numeric confidence score based on cross-chunk support
-- **Caching** — intermediate results are cached by content hash to avoid redundant LLM calls
-- **Human-in-the-loop** — the researcher reviews and edits the model before final export
+- **Structured outputs only**: no raw YAML parsing; use function calling / instructor library for typed outputs
+- **Dual RAG context**: every extraction is grounded in both peer responses AND research literature
+- **Confidence scoring**: every element carries a numeric confidence score based on cross-chunk support
+- **Caching**: intermediate results are cached by content hash to avoid redundant LLM calls
+- **Human-in-the-loop**: the researcher reviews and edits the model before final export
 
 ---
 
@@ -233,7 +233,7 @@ agentic_research_assistant/
 
 ---
 
-## 4. Phase 1 — Ingestion & Preprocessing
+## 4. Phase 1 - Ingestion & Preprocessing
 
 ### Goal
 
@@ -318,7 +318,7 @@ langdetect>=1.0
 
 ---
 
-## 5. Phase 2 — Dual RAG Store
+## 5. Phase 2 - Dual RAG Store
 
 ### Goal
 
@@ -355,13 +355,13 @@ class SurveyStore:
 
 This is the key new addition. It works in two steps:
 
-**Step A — Topic keyword extraction**
+**Step A: Topic keyword extraction**
 
-After the survey store is built, run BERTopic on the survey chunks to identify 5–10 main topics. Extract the top 3 keywords per topic. These become your Semantic Scholar search queries.
+After the survey store is built, run BERTopic on the survey chunks to identify 5-10 main topics. Extract the top 3 keywords per topic. These become your Semantic Scholar search queries.
 
 Example: Survey about workplace stress → topics → keywords: `["workload burnout stress", "remote work isolation", "manager feedback motivation"]`
 
-**Step B — Paper retrieval from Semantic Scholar**
+**Step B: Paper retrieval from Semantic Scholar**
 
 ```python
 # rag/semantic_scholar.py
@@ -389,9 +389,9 @@ class SemanticScholarClient:
         return resp.json().get("abstract", "")
 ```
 
-For each keyword cluster, retrieve 20–30 papers and store their abstracts + metadata in the literature vector store. Target: 100–200 papers total per pipeline run.
+For each keyword cluster, retrieve 20-30 papers and store their abstracts + metadata in the literature vector store. Target: 100-200 papers total per pipeline run.
 
-**Step C — Literature store structure**
+**Step C: Literature store structure**
 
 Each document in the literature store is a paper abstract with metadata:
 
@@ -431,7 +431,7 @@ class CachedEmbedder:
 
 ---
 
-## 6. Phase 3 — Extraction Agent
+## 6. Phase 3 - Extraction Agent
 
 ### Goal
 
@@ -530,11 +530,11 @@ The prompt must ask for the `gaps` field explicitly. The key instruction:
 
 ---
 
-## 7. Phase 4 — Gap Detection Agent
+## 7. Phase 4 - Gap Detection Agent
 
 ### Goal
 
-After per-chunk extraction, run a second, dedicated gap detection pass across ALL extracted models together — not just per-chunk. This catches cross-chunk gaps that individual chunks cannot see.
+After per-chunk extraction, run a second, dedicated gap detection pass across ALL extracted models together: not just per-chunk. This catches cross-chunk gaps that individual chunks cannot see.
 
 ### Schema
 
@@ -551,7 +551,7 @@ class CrossChunkGap(BaseModel):
 class CrossChunkGapReport(BaseModel):
     gaps: list[CrossChunkGap]
     overall_model_completeness: float  # 0-1
-    model_testability_score: float     # 0-1 — can these hypotheses be operationalized?
+    model_testability_score: float     # 0-1: can these hypotheses be operationalized?
     priority_gaps: list[str]           # Top 3 most important gaps to address
 ```
 
@@ -567,13 +567,13 @@ class CrossChunkGapReport(BaseModel):
 |----------|---------|
 | Missing variable | "Stress is mentioned as an outcome but coping strategies are never described" |
 | Missing mechanism | "Workload → Stress is stated but HOW workload causes stress is never explained" |
-| Ambiguous direction | "Some respondents say autonomy helps, others say it hurts — no context given" |
-| No measurement | "Team support is mentioned but never operationalized — how would you measure it?" |
+| Ambiguous direction | "Some respondents say autonomy helps, others say it hurts: no context given" |
+| No measurement | "Team support is mentioned but never operationalized: how would you measure it?" |
 | Missing moderator | "The relationship changes across contexts (remote vs office) but that context variable is implicit" |
 
 ---
 
-## 8. Phase 5 — Clarification Agent
+## 8. Phase 5 - Clarification Agent
 
 ### Goal
 
@@ -629,7 +629,7 @@ If `estimated_new_data_needed == True`, the Streamlit UI displays a panel:
 
 ---
 
-## 9. Phase 6 — Re-Extraction & Refinement Loop
+## 9. Phase 6 - Re-Extraction & Refinement Loop
 
 ### Goal
 
@@ -681,7 +681,7 @@ Each re-extraction pass uses a progressively richer context:
 
 ---
 
-## 10. Phase 7 — Consolidation Agent
+## 10. Phase 7 - Consolidation Agent
 
 ### Goal
 
@@ -689,7 +689,7 @@ Merge all per-chunk extraction results into one single, coherent model. This is 
 
 ### Steps
 
-**Step 1 — Variable deduplication**
+**Step 1: Variable deduplication**
 
 Use embedding similarity to group variables that refer to the same construct:
 
@@ -710,7 +710,7 @@ def deduplicate_variables(all_variables: list[Variable]) -> list[MergedVariable]
 
 Example: `"Stress"`, `"Emotional strain"`, `"Work stress"`, `"Anxiety at work"` → unified as `"Occupational Stress"`
 
-**Step 2 — Relationship frequency scoring**
+**Step 2: Relationship frequency scoring**
 
 ```python
 @dataclass
@@ -732,14 +732,14 @@ Confidence formula:
 confidence = (support_fraction × 0.6) + (avg_individual_confidence × 0.4)
 ```
 
-**Step 3 — Hypothesis synthesis**
+**Step 3: Hypothesis synthesis**
 
 Merge similar hypotheses from different chunks. Score each by:
 - Number of chunks that independently derive the same hypothesis
 - Average confidence of supporting relationships
 - Presence of contradicting evidence
 
-**Step 4 — Moderator/mediator identification**
+**Step 4: Moderator/mediator identification**
 
 Look for variables that appear in conditional statements ("When X, then Y → Z changes") and automatically classify them as moderators of the relevant relationship.
 
@@ -760,7 +760,7 @@ class ConsolidatedModel(BaseModel):
 
 ---
 
-## 11. Phase 8 — Conflict Detection & Resolution
+## 11. Phase 8 - Conflict Detection & Resolution
 
 ### Goal
 
@@ -780,20 +780,20 @@ class ContradictionType(str, Enum):
 
 For each contradiction, the conflict detector applies this resolution cascade:
 
-**Step 1 — Check for subgroup explanation**
+**Step 1: Check for subgroup explanation**
 
 Are the contradicting chunks from different respondent groups (remote vs office, different departments, different seniority levels)? If metadata supports it, the relationship becomes conditional:
 `"Autonomy → Motivation: positive for senior staff, negative for junior staff"`
 
-**Step 2 — Check literature**
+**Step 2: Check literature**
 
 Query literature store: "Does autonomy have positive or negative effects on motivation?" If literature strongly supports one direction, flag the minority direction as an outlier and add a note.
 
-**Step 3 — Confidence differential**
+**Step 3: Confidence differential**
 
 If one direction has much higher confidence (e.g. 0.80 vs 0.25), keep the high-confidence version and note the low-confidence contradiction.
 
-**Step 4 — Present to researcher**
+**Step 4: Present to researcher**
 
 If none of the above resolves it, surface to the HITL UI as an unresolved contradiction requiring researcher judgment.
 
@@ -811,7 +811,7 @@ class Contradiction(BaseModel):
 
 ---
 
-## 12. Phase 9 — Literature Validation Agent
+## 12. Phase 9 - Literature Validation Agent
 
 ### Goal
 
@@ -830,7 +830,7 @@ class HypothesisValidation(BaseModel):
     literature_support_score: float  # 0-1, based on paper count and citation weight
     consensus_strength: str          # "strong", "moderate", "weak", "contested", "novel"
     
-    # "novel" = no papers found at all — this might be a genuinely new finding
+    # "novel" = no papers found at all: this might be a genuinely new finding
     novelty_flag: bool
 
 class PaperReference(BaseModel):
@@ -848,7 +848,7 @@ class PaperReference(BaseModel):
 ```python
 def calculate_literature_score(papers: list[PaperReference]) -> float:
     if not papers:
-        return 0.0  # Novel — flag separately
+        return 0.0  # Novel: flag separately
 
     supporting = [p for p in papers if p.stance == "supports"]
     contradicting = [p for p in papers if p.stance == "contradicts"]
@@ -863,11 +863,11 @@ def calculate_literature_score(papers: list[PaperReference]) -> float:
 
 ### Novelty Detection
 
-If `literature_support_score == 0` AND the hypothesis has high data confidence (> 0.7), flag it as a **potentially novel finding** — this is actually scientifically interesting and should be highlighted in the output.
+If `literature_support_score == 0` AND the hypothesis has high data confidence (> 0.7), flag it as a **potentially novel finding**: this is actually scientifically interesting and should be highlighted in the output.
 
 ---
 
-## 13. Phase 10 — Human-in-the-Loop UI
+## 13. Phase 10 - Human-in-the-Loop UI
 
 ### Goal
 
@@ -875,23 +875,23 @@ Give the researcher a clean review interface to validate, edit, and finalize the
 
 ### UI Pages
 
-**Page 1 — Upload & Configure**
+**Page 1: Upload & Configure**
 - File uploader (CSV, TXT, PDF, DOCX)
 - API key input
 - Pipeline settings (max iterations, completeness threshold, domain for literature)
 - "Start Pipeline" button with live log streaming
 
-**Page 2 — Pipeline Monitor**
+**Page 2: Pipeline Monitor**
 - Real-time progress bar showing which agent is running
 - Live log output streamed from the backend
 - Estimated time remaining
 - "Pause and Review" button to interrupt after any phase
 
-**Page 3 — Model Review (HITL)**
+**Page 3: Model Review (HITL)**
 
 This is the core review screen. Split into three panels:
 
-*Left panel — Variable editor*
+*Left panel: Variable editor*
 ```
 Variables (23 found)
 ─────────────────────────────────
@@ -901,19 +901,19 @@ Variables (23 found)
 + Add variable manually
 ```
 
-*Center panel — Causal graph*
+*Center panel: Causal graph*
 - Interactive pyvis graph
 - Click a node to see all quotes supporting it
 - Click an edge to see its confidence score and supporting quotes
 - Drag nodes to reorganize layout
 - Toggle edge visibility by confidence threshold
 
-*Right panel — Contradictions & Gaps*
+*Right panel: Contradictions & Gaps*
 - List of unresolved contradictions for researcher to adjudicate
 - Remaining gaps with researcher's option to provide additional data
 - Literature validation scores per hypothesis
 
-**Page 4 — Export**
+**Page 4: Export**
 - Download YAML model spec
 - Download interactive causal graph (HTML)
 - Download Mermaid diagram (for embedding in docs)
@@ -924,7 +924,7 @@ Variables (23 found)
 
 Use `st.session_state` to persist pipeline state across page navigation.
 
-Use `st.status()` (Streamlit 1.28+) for the live pipeline monitor — it supports streaming logs cleanly.
+Use `st.status()` (Streamlit 1.28+) for the live pipeline monitor: it supports streaming logs cleanly.
 
 For the causal graph, embed pyvis HTML directly:
 ```python
@@ -944,9 +944,9 @@ def render_causal_graph(model: ConsolidatedModel):
 
 ---
 
-## 14. Phase 11 — Final Output & Export
+## 14. Phase 11 - Final Output & Export
 
-### Output 1 — YAML Model Spec
+### Output 1 - YAML Model Spec
 
 ```yaml
 model:
@@ -984,11 +984,11 @@ hypotheses:
     supporting_papers: [...]
 ```
 
-### Output 2 — Causal Graph (Interactive HTML)
+### Output 2 - Causal Graph (Interactive HTML)
 
 Built with pyvis, embeddable in any web page. Node size = confidence, edge thickness = confidence, color coding by variable type.
 
-### Output 3 — Mermaid Diagram
+### Output 3 - Mermaid Diagram
 
 ```
 graph LR
@@ -997,7 +997,7 @@ graph LR
     ManagerFeedback -->|"negative, conf:0.71"| OccupationalStress
 ```
 
-### Output 4 — Evidence Report (Markdown)
+### Output 4 - Evidence Report (Markdown)
 
 For each hypothesis:
 - Statement
@@ -1012,7 +1012,7 @@ For each hypothesis:
 
 ### LangGraph State Machine
 
-LangGraph models the pipeline as a directed graph of agent nodes with conditional edges. This is what makes the system truly agentic — the orchestrator decides at runtime whether to loop back, proceed, or pause for human input.
+LangGraph models the pipeline as a directed graph of agent nodes with conditional edges. This is what makes the system truly agentic: the orchestrator decides at runtime whether to loop back, proceed, or pause for human input.
 
 ```python
 # orchestrator/graph.py
@@ -1116,17 +1116,17 @@ class PipelineState(BaseModel):
 
 ### Why This Matters
 
-The iterative loop can generate 50–200 LLM calls per pipeline run on a 20-chunk dataset. Without caching, re-running a pipeline to test changes to later phases becomes expensive and slow.
+The iterative loop can generate 50-200 LLM calls per pipeline run on a 20-chunk dataset. Without caching, re-running a pipeline to test changes to later phases becomes expensive and slow.
 
 ### Caching Strategy
 
-**Level 1 — Embedding cache** (diskcache, keyed by text hash)
+**Level 1: Embedding cache** (diskcache, keyed by text hash)
 Embeddings never change for the same text. Cache indefinitely.
 
-**Level 2 — Extraction cache** (Redis, TTL 24h, keyed by chunk_hash + prompt_version)
+**Level 2: Extraction cache** (Redis, TTL 24h, keyed by chunk_hash + prompt_version)
 Per-chunk extraction results are reused if the chunk text and prompt haven't changed.
 
-**Level 3 — Literature cache** (Redis, TTL 7 days, keyed by query string)
+**Level 3: Literature cache** (Redis, TTL 7 days, keyed by query string)
 Semantic Scholar results for the same query don't change often.
 
 ```python
@@ -1161,7 +1161,7 @@ def set_cached_extraction(chunk_text: str, prompt_version: str, result: dict):
 | Re-extraction (×20, 1 iteration) | 20 | ~70,000 | ~$0.05 |
 | Consolidation | 1 | ~15,000 | ~$0.01 |
 | Conflict detection | 1 | ~6,000 | <$0.01 |
-| Literature validation (×N hypotheses) | 5–10 | ~20,000 | ~$0.01 |
+| Literature validation (×N hypotheses) | 5-10 | ~20,000 | ~$0.01 |
 | **Total (no cache)** | **~60** | **~180,000** | **~$0.13** |
 
 With caching on re-runs (only later phases re-run), cost drops to < $0.03.
@@ -1201,7 +1201,7 @@ Test the full loop with a small 5-chunk dataset. Verify:
 - Completeness score is logged at each iteration
 - Cache is populated after first run and used on second run
 
-### Evaluation Metric — Inter-Rater Agreement
+### Evaluation Metric - Inter-Rater Agreement
 
 To measure quality, compare your agent's output against a human-coded model of the same data:
 
@@ -1214,7 +1214,7 @@ To measure quality, compare your agent's output against a human-coded model of t
 
 ## 18. Implementation Roadmap
 
-### Week 1–2: Foundation (Structured Outputs + Consolidation)
+### Week 1-2: Foundation (Structured Outputs + Consolidation)
 
 - [ ] Install and configure `instructor` library
 - [ ] Define all Pydantic schemas (`extraction.py`, `consolidation.py`, etc.)
@@ -1225,7 +1225,7 @@ To measure quality, compare your agent's output against a human-coded model of t
 - [ ] Write unit tests for extraction and consolidation
 - **Milestone**: Run full pipeline on synthetic data, get a consolidated model out
 
-### Week 3–4: Dual RAG + Literature
+### Week 3-4: Dual RAG + Literature
 
 - [ ] Build `CachedEmbedder` with diskcache
 - [ ] Migrate from FAISS to Chroma with persistence
@@ -1235,7 +1235,7 @@ To measure quality, compare your agent's output against a human-coded model of t
 - [ ] Update extraction prompt to use dual context
 - **Milestone**: Extraction uses both survey context AND literature context
 
-### Week 5–6: Gap Detection + Clarification Loop
+### Week 5-6: Gap Detection + Clarification Loop
 
 - [ ] Implement gap detection agent with `CrossChunkGapReport` schema
 - [ ] Implement clarification agent
@@ -1243,7 +1243,7 @@ To measure quality, compare your agent's output against a human-coded model of t
 - [ ] Build the re-extraction loop logic
 - [ ] Add loop state tracking (iterations, completeness threshold)
 - [ ] Set up Redis for extraction result caching
-- **Milestone**: Pipeline runs 2–3 iterations automatically and improves completeness score
+- **Milestone**: Pipeline runs 2-3 iterations automatically and improves completeness score
 
 ### Week 7: LangGraph Orchestration
 
@@ -1296,7 +1296,7 @@ GROQ_API_KEY=your_groq_api_key_here
 # Redis (for caching + Celery)
 REDIS_URL=redis://localhost:6379/0
 
-# Semantic Scholar (optional — basic use needs no key)
+# Semantic Scholar (optional - basic use needs no key)
 SEMANTIC_SCHOLAR_API_KEY=
 
 # PubMed (optional)
@@ -1409,5 +1409,5 @@ streamlit run ui/app.py
 
 ---
 
-*Plan version 1.0 — April 2025*
+*Plan version 1.0: April 2025*
 *Project: Agentic Research Assistant*

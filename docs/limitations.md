@@ -8,7 +8,7 @@ The pipeline produces a **structured first draft with traceable quotes**. It doe
 
 ## Hallucination and over-interpretation
 
-Large language models can state relationships plausibly even when evidence is thin. The schema includes `evidence_strength` (`direct` / `inferred` / `weak`) to make some of that visible — but those labels are **model-generated** and can be wrong. Treat them as hints, not facts.
+Large language models can state relationships plausibly even when evidence is thin. The schema includes `evidence_strength` (`direct` / `inferred` / `weak`) to make some of that visible, but those labels are **model-generated** and can be wrong. Treat them as hints, not facts.
 
 ## Prompt injection surface
 
@@ -28,4 +28,4 @@ PDF ingestion is best-effort text extraction. Complex layouts, tables, and scans
 
 ## Structural coverage is not “completeness”
 
-The **structural coverage score** is a heuristic over schema gaps — see [structural-coverage-score.md](structural-coverage-score.md). Do not describe it as theoretical saturation or coding completeness.
+The **structural coverage score** is a heuristic over schema gaps: see [structural-coverage-score.md](structural-coverage-score.md). Do not describe it as theoretical saturation or coding completeness.

@@ -5,7 +5,7 @@ author: llm-survey
 date: 2026-05-06
 intended_model: any-instruct-tuned
 change_rationale: |
-  Initial registry version — captures the system prompt that has been in use
+  Initial registry version, captures the system prompt that has been in use
   via `EXTRACTION_SYSTEM_PROMPT` in model_extraction_prompts.py. No semantic
   change; this commit only moves the text into the versioned registry so
   future edits can be tracked with eval deltas.

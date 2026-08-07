@@ -6,8 +6,8 @@ This page records **how** we validate the extraction layer, and gives **reproduc
 
 To validate the evaluation script and to anchor documentation with concrete arithmetic, we ship:
 
-- `docs/fixtures/extracted_models_eval_fixture.json` — hand-authored extraction-shaped JSON for respondents **1, 2, 3, 7, and 20** (five chunks).
-- `docs/fixtures/evaluation_gold_fixture_subset.json` — nine human-intended directed edges for those same rows (substring match rules in `scripts/compute_eval_metrics.py`).
+- `docs/fixtures/extracted_models_eval_fixture.json`: hand-authored extraction-shaped JSON for respondents **1, 2, 3, 7, and 20** (five chunks).
+- `docs/fixtures/evaluation_gold_fixture_subset.json`: nine human-intended directed edges for those same rows (substring match rules in `scripts/compute_eval_metrics.py`).
 
 Run:
 

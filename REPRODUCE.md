@@ -10,10 +10,10 @@ committed; live ablation results are therefore **UNVERIFIED**.
 |---|---|---|
 | `make install` | ~2 min (cold) | $0 |
 | `make eval` (offline; no LLM calls) | < 5 sec | $0 |
-| `make ablation` (3 variants, default model) | ~3–6 min (estimate) | < $0.05 (estimate) |
-| Full pipeline + topic analysis | ~5–8 min (estimate) | < $0.10 (estimate) |
+| `make ablation` (3 variants, default model) | ~3-6 min (estimate) | < $0.05 (estimate) |
+| Full pipeline + topic analysis | ~5-8 min (estimate) | < $0.10 (estimate) |
 
-The offline `make eval` target works without an API key — it recomputes
+The offline `make eval` target works without an API key: it recomputes
 metrics + bootstrap CIs over the bundled fixture extractions in
 `docs/fixtures/`. The ablation and full-pipeline targets require
 `OPENROUTER_API_KEY`.
@@ -33,7 +33,7 @@ make eval
 
 This regenerates `docs/evaluation_metrics.json`. If the result differs from
 the committed version, the determinism CI job (see `.github/workflows/ci.yml`)
-will fail — that's the trip-wire.
+will fail: that's the trip-wire.
 
 ## End-to-end reproduction (requires API key)
 
@@ -77,7 +77,7 @@ Any non-trivial diff indicates a reproducibility risk.
   regenerate and review it whenever the supported Python version changes.
 - Reranker / embedding-model comparisons (see
   [docs/agentic_research_assistant_plan.md](docs/agentic_research_assistant_plan.md))
-  are not yet implemented — the harness scaffolding exists but the alternative
+  are not yet implemented: the harness scaffolding exists but the alternative
   backends haven't been wired in.
 - Multi-corpus ingestion requires you to obtain and
   license each corpus individually; the repo only ships the synthetic one.

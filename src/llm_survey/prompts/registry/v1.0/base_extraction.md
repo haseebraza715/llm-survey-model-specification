@@ -7,7 +7,7 @@ intended_model: any-instruct-tuned
 change_rationale: |
   Initial registry version of the YAML-output extraction prompt used when
   RAG context is not available. Mirrors `BASE_EXTRACTION_PROMPT` in
-  model_extraction_prompts.py — no semantic change, just lifted into the
+  model_extraction_prompts.py: no semantic change, just lifted into the
   registry so future edits can carry an eval delta.
 eval_delta: null
 ---

@@ -1,4 +1,4 @@
-# Agentic Research Assistant — Full Implementation Plan (Saved)
+# Agentic Research Assistant - Full Implementation Plan (Saved)
 
 > **Archived planning snapshot.** Retained for historical context; it is not a
 > statement of current implementation, measured results, or current cost.
@@ -46,7 +46,7 @@ Planned modules (target architecture):
 
 ## 4. Planned Phases (Execution)
 
-## Phase 1 — Ingestion & Preprocessing
+## Phase 1 - Ingestion & Preprocessing
 
 - Support CSV/TXT/PDF/DOCX
 - Clean/deduplicate text
@@ -54,60 +54,60 @@ Planned modules (target architecture):
 - Enriched metadata (speaker/time/sentiment/language)
 - Save run-scoped processed chunks
 
-## Phase 2 — Dual RAG Store
+## Phase 2 - Dual RAG Store
 
 - Survey vector store (persistent Chroma)
 - Literature vector store from Semantic Scholar abstracts
 - BERTopic keyword seeding for literature queries
 - Content-hash embedding cache
 
-## Phase 3 — Extraction Agent
+## Phase 3 - Extraction Agent
 
 - Typed Pydantic schema for variables/relationships/hypotheses/gaps
 - Structured outputs via instructor (no YAML parsing)
 - Per-chunk extraction grounded in survey + literature context
 
-## Phase 4 — Gap Detection Agent
+## Phase 4 - Gap Detection Agent
 
 - Cross-chunk gap report
 - Completeness and testability scoring
 - Prioritized follow-ups
 
-## Phase 5 — Clarification Agent
+## Phase 5 - Clarification Agent
 
 - Convert gaps to actionable questions
 - Route answers to researcher/literature/either
 - Auto-answer from literature when applicable
 
-## Phase 6 — Re-Extraction Loop
+## Phase 6 - Re-Extraction Loop
 
 - Iterative loop with max iterations + completeness threshold
 - Re-extract with enriched context each pass
 
-## Phase 7 — Consolidation Agent
+## Phase 7 - Consolidation Agent
 
 - Variable deduplication by embedding similarity
 - Relationship frequency/confidence scoring
 - Hypothesis synthesis + contradiction capture
 
-## Phase 8 — Conflict Detection & Resolution
+## Phase 8 - Conflict Detection & Resolution
 
 - Detect direction/presence/moderator/subgroup contradictions
 - Resolve via subgroup metadata -> literature -> confidence -> HITL escalation
 
-## Phase 9 — Literature Validation Agent
+## Phase 9 - Literature Validation Agent
 
 - Validate each hypothesis with supporting/contradicting papers
 - Literature support score + consensus strength + novelty flag
 
-## Phase 10 — Human-in-the-Loop UI
+## Phase 10 - Human-in-the-Loop UI
 
 - Upload/config page
 - Pipeline monitor page
 - Model review/editor + graph + contradiction panel
 - Export page
 
-## Phase 11 — Final Output & Export
+## Phase 11 - Final Output & Export
 
 - YAML model spec
 - interactive causal graph HTML

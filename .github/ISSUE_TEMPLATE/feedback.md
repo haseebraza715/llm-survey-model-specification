@@ -7,7 +7,7 @@ labels: feedback
 
 ## What dataset did you try?
 
-<!-- Source, language, approximate size, format — do not paste confidential text. -->
+<!-- Source, language, approximate size, format: do not paste confidential text. -->
 
 ## What did it get right?
 

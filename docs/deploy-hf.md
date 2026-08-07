@@ -43,8 +43,8 @@ python3 scripts/push_hf_space.py --upload-only
 
 In your GitHub repo settings → Secrets → Actions, add:
 
-- `HF_TOKEN` — same `hf_…` token  
-- `HF_SPACE_REPO` — e.g. `you/qualitative-model-drafter`
+- `HF_TOKEN`: same `hf_…` token  
+- `HF_SPACE_REPO`: e.g. `you/qualitative-model-drafter`
 
 Pushes to `main` then run [`.github/workflows/deploy-hf-space.yml`](../.github/workflows/deploy-hf-space.yml).
 
