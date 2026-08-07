@@ -2,8 +2,9 @@
 
 Honest list of weaknesses in the current codebase (post-Round-2 implementation),
 ranked by how much each one would actually move the needle, not by how much
-code it would take. Companion to [RESEARCH_PLAN.md](RESEARCH_PLAN.md): the
-research plan is the strategic roadmap, this file is the tactical punch list.
+code it would take. Companion to
+[docs/agentic_research_assistant_plan.md](docs/agentic_research_assistant_plan.md):
+the research plan is the strategic roadmap, this file is the tactical punch list.
 
 Each item below has a **Why it matters**, a **Fix sketch**, and a **Cost**
 estimate. Items 1–4 unblock real research; items 5–10 clean up debt I shipped
@@ -232,3 +233,39 @@ If working solo and time-boxed, do them in this order:
 
 After #1–5 the project is in a meaningfully stronger position to start the
 multi-corpus and human-eval work that the RESEARCH_PLAN actually cares about.
+
+---
+
+## 11. Formatter and type-check drift (as of the demo-script review)
+
+**Why it matters.** `make lint` and `make typecheck` were red on a fresh checkout:
+- `black --check src tests scripts` reformats 29 files — the tree was never
+  black-clean at the declared line-length (110), and unpinned `black>=24.8`
+  drifts to black 26.x, which reformats differently again (pinned to
+  `black==24.8.0` in `pyproject.toml` as part of this review).
+- `mypy src` reports ~35 errors, all in heavy modules that import untyped deps
+  (`rag_pipeline.py`, `rag/literature_store.py`, `topic_analysis.py`,
+  `utils/preprocess.py`, `eval/ablation.py`); the leaf modules are clean.
+
+**Fix sketch.** Bring the heavy modules under black (`make format` with the
+full tree) and address the mypy errors in `rag_pipeline.py` (the `**dict`
+unpacking into `instructor.create_with_completion` is the only substantive
+one) plus the None-fallbacks in `preprocess.py`/`topic_analysis.py`. Until
+then, `make lint`/`make typecheck` mirror the CI-scoped subset defined in
+`.github/workflows/ci.yml`.
+
+**Cost.** ~1 hour of formatting churn; ~2–3 hours for the mypy cleanup (needs
+`cast(...)`/typed fallbacks, not ignores).
+
+## 12. `docs/evaluation_metrics.json` CI trip-wire only diffs stdout
+
+**Why it matters.** The eval-stability CI job pipes the script's stdout to
+`/tmp` files and diffs those, but the committed artifact is the file the
+script writes (`docs/evaluation_metrics.json`). Today both are identical
+(verified byte-for-byte), but a future edit to the write path could diverge
+them without CI noticing.
+
+**Fix sketch.** Make CI diff `docs/evaluation_metrics.json` before/after two
+runs (plus a `git diff --exit-code` on the tracked file).
+
+**Cost.** ~10 min.

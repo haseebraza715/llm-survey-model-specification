@@ -75,8 +75,9 @@ Any non-trivial diff indicates a reproducibility risk.
 
 - The lock targets the supported Python environment recorded in its header;
   regenerate and review it whenever the supported Python version changes.
-- Reranker / embedding-model comparisons in RESEARCH_PLAN §3.3 are not yet
-  implemented — the harness scaffolding exists but the alternative backends
-  haven't been wired in.
-- Multi-corpus ingestion (RESEARCH_PLAN §1.1) requires you to obtain and
+- Reranker / embedding-model comparisons (see
+  [docs/agentic_research_assistant_plan.md](docs/agentic_research_assistant_plan.md))
+  are not yet implemented — the harness scaffolding exists but the alternative
+  backends haven't been wired in.
+- Multi-corpus ingestion requires you to obtain and
   license each corpus individually; the repo only ships the synthetic one.
