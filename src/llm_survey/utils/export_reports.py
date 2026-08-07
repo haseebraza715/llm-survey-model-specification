@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import html
 import json
+import zipfile
 from collections.abc import Mapping, Sequence
 from io import BytesIO
 from typing import Any
@@ -169,7 +171,40 @@ def build_docx_bytes(
 
     buf = BytesIO()
     doc.save(buf)
-    return buf.getvalue()
+    return _deterministic_docx_bytes(buf)
+
+
+def _deterministic_docx_bytes(buf: BytesIO) -> bytes:
+    """Re-serialize the DOCX package with fixed zip-entry timestamps.
+
+    `python-docx` writes each zip entry with the current wall-clock time, so
+    two saves of identical content differ by bytes. This defeats the demo's
+    byte-for-byte reproducibility claim. Re-packing with a pinned entry date
+    makes `build_docx_bytes(...)` a pure function of its inputs.
+    """
+    _orig_init = zipfile.ZipInfo.__init__
+
+    def _pinned_init(self, *args: Any, **kwargs: Any) -> None:
+        _orig_init(self, *args, **kwargs)
+        self.date_time = (2024, 1, 1, 0, 0, 0)
+
+    zipfile.ZipInfo.__init__ = _pinned_init  # type: ignore[method-assign]
+    try:
+        with zipfile.ZipFile(buf, "r") as zin:
+            entries: list[tuple[zipfile.ZipInfo, bytes]] = []
+            for info in zin.infolist():
+                entries.append((info, zin.read(info.filename)))
+        out = BytesIO()
+        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zout:
+            for info, data in entries:
+                fixed = zipfile.ZipInfo(info.filename)
+                fixed.date_time = (2024, 1, 1, 0, 0, 0)
+                fixed.compress_type = zipfile.ZIP_DEFLATED
+                fixed.external_attr = info.external_attr
+                zout.writestr(fixed, data)
+        return out.getvalue()
+    finally:
+        zipfile.ZipInfo.__init__ = _orig_init  # type: ignore[method-assign]
 
 
 def build_json_export_bundle(
