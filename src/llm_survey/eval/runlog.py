@@ -58,6 +58,13 @@ def _hash_file(path: Path) -> str | None:
     return h.hexdigest()
 
 
+def _repo_lockfile() -> Path:
+    """requirements.lock resolved against the repo root, so the hash is
+    recorded correctly even when the pipeline runs from another cwd."""
+    repo_root = Path(__file__).resolve().parents[3]
+    return repo_root / "requirements.lock"
+
+
 @dataclass
 class RunLog:
     run_id: str
@@ -74,8 +81,8 @@ class RunLog:
     ended_at: float | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
-    def attach_lockfile_hash(self, lock_path: str | Path = "requirements.lock") -> None:
-        h = _hash_file(Path(lock_path))
+    def attach_lockfile_hash(self, lock_path: str | Path | None = None) -> None:
+        h = _hash_file(Path(lock_path) if lock_path else _repo_lockfile())
         if h:
             self.extras["requirements_lock_sha256"] = h
 
