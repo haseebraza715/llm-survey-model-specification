@@ -4,26 +4,28 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 [![CI](https://img.shields.io/github/actions/workflow/status/haseebraza715/QualModel/ci.yml?branch=main&label=ci)](.github/workflows/ci.yml)
 
-**Turns open-ended survey answers into a verifiable causal model — every claim backed by its verbatim quote.**
+**Turns open-ended survey answers into a verifiable causal model: every claim backed by its verbatim quote.**
 
-![QualModel demo](docs/demo.gif)
+<video controls autoplay muted loop playsinline width="100%" src="https://github.com/haseebraza715/QualModel/raw/main/docs/demo.mp4"></video>
+
+Prefer a GIF? [docs/demo.gif](docs/demo.gif)
 
 ---
 
-## Try it in 60 seconds — no API key, no network
+## Try it in 60 seconds, no API key, no network
 
 ```bash
 git clone https://github.com/haseebraza715/QualModel.git
 cd QualModel
-uv sync          # optional — pre-build the locked environment
+uv sync          # optional, pre-build the locked environment
 ./scripts/demo.sh
 ```
 
 What you'll see:
 
-- **Survey → causal model.** 20 free-text responses in; 15 variables, 10 relationships, and 10 scored hypotheses out — YAML spec + Mermaid causal graph.
+- **Survey → causal model.** 20 free-text responses in; 15 variables, 10 relationships, and 10 scored hypotheses out: YAML spec + Mermaid causal graph.
 - **Every claim → verbatim quote.** Each relationship and hypothesis ties back to the exact survey chunk and quote that supports it.
-- **Deterministic eval.** Precision / recall / F1 with bootstrap CIs, recomputed from committed fixtures — no keys, no network.
+- **Deterministic eval.** Precision / recall / F1 with bootstrap CIs, recomputed from committed fixtures, no keys, no network.
 
 Honest caveat: the demo replays the pipeline's deterministic phases over the bundled synthetic fixture in `docs/fixtures/`. The live pipeline needs an OpenRouter key:
 
@@ -50,7 +52,7 @@ survey text → chunk → LLM extraction → gap detection → clarification →
   → consolidation & contradiction check → literature validation → exports
 ```
 
-Every claim is born inside a chunk with its verbatim quote attached, and that provenance survives consolidation and every export. Prompts are versioned (sha256) and decoding is `temperature=0` with a fixed seed — so the deterministic phases are byte-reproducible from a commit.
+Every claim is born inside a chunk with its verbatim quote attached, and that provenance survives consolidation and every export. Prompts are versioned (sha256) and decoding is `temperature=0` with a fixed seed, so the deterministic phases are byte-reproducible from a commit.
 
 ## Quick facts
 
@@ -58,13 +60,13 @@ Every claim is born inside a chunk with its verbatim quote attached, and that pr
 |---|---|
 | **Language** | Python ≥ 3.10 |
 | **Dependencies** | Exact pins in `pyproject.toml`; hash-locked env in `uv.lock` |
-| **Offline paths** | `./scripts/demo.sh`, `make eval` — no key, no network |
+| **Offline paths** | `./scripts/demo.sh`, `make eval`, no key, no network |
 | **Live path** | `OPENROUTER_API_KEY` + `uv run python3 main.py -i data/raw/synthetic_workplace_survey.csv` |
 | **License** | MIT |
 
 ## Reproducibility
 
-Hash-locked deps, versioned prompts, per-run `runlog.json` — `make reproduce` installs and runs the offline eval. Full recipe: [REPRODUCE.md](REPRODUCE.md).
+Hash-locked deps, versioned prompts, per-run `runlog.json`; `make reproduce` installs and runs the offline eval. Full recipe: [REPRODUCE.md](REPRODUCE.md).
 
 ## Evaluation
 
@@ -72,10 +74,10 @@ Hash-locked deps, versioned prompts, per-run `runlog.json` — `make reproduce` 
 
 ## Links
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — pipeline deep dive
-- [REPRODUCE.md](REPRODUCE.md) — reproduction recipe
-- [NEXT_STEPS.md](NEXT_STEPS.md) — honest punch list
-- [docs/deploy-hf.md](docs/deploy-hf.md) — Hugging Face Space deployment
+- [ARCHITECTURE.md](ARCHITECTURE.md): pipeline deep dive
+- [REPRODUCE.md](REPRODUCE.md): reproduction recipe
+- [NEXT_STEPS.md](NEXT_STEPS.md): honest punch list
+- [docs/deploy-hf.md](docs/deploy-hf.md): Hugging Face Space deployment
 
 ## License
 
