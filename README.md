@@ -1,320 +1,148 @@
-# LLM Survey Model Specification
+# QualModel
 
-> **A reproducible research pipeline that turns qualitative survey or interview
-> text into a structured causal model — variables, relationships, hypotheses,
-> moderators — with quote-level provenance attached to every claim, so a
-> researcher can verify before they trust.**
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![CI](https://img.shields.io/github/actions/workflow/status/haseebraza715/QualModel/ci.yml?branch=main&label=ci)](.github/workflows/ci.yml)
 
-This repo is a research instrument, not a product. It ships with a deterministic
-evaluation harness, bootstrap confidence intervals, an ablation runner, a
-versioned prompt registry, and a `make reproduce` recipe for the explicitly
-listed deterministic fixture metrics. Live-model, ablation, latency, and cost
-claims require separately archived run artifacts.
+**Turn open-ended survey or interview text into a verifiable causal model — variables, relationships, and hypotheses, every claim backed by its verbatim quote.**
 
-![Animated: relationship → source quote → exports](static/demo-provenance.gif)
+![QualModel demo](docs/demo.gif)
 
 ---
 
-## Table of contents
+## Try it in 60 seconds — no API key, no network
 
-- [What it does](#what-it-does)
-- [How the pipeline works](#how-the-pipeline-works)
-- [Quickstart](#quickstart)
-- [Reproducibility](#reproducibility)
-- [Evaluation](#evaluation)
-- [Ablation studies](#ablation-studies)
-- [Configuration](#configuration)
-- [Repository layout](#repository-layout)
-- [What's still missing](#whats-still-missing)
-- [Deploying to Hugging Face Spaces](#deploying-to-hugging-face-spaces)
-- [Citing](#citing)
-- [License](#license)
+```bash
+git clone https://github.com/haseebraza715/QualModel.git
+cd QualModel
+uv sync          # optional — pre-build the locked environment
+./scripts/demo.sh
+```
+
+What you'll see:
+
+- **Survey → causal model.** 20 free-text responses in; a consolidated model of **15 variables, 10 relationships, and 10 scored hypotheses** out — as a YAML spec plus a Mermaid causal graph.
+- **Every claim → verbatim quote.** The evidence report ties each relationship and hypothesis to the exact survey chunk and quote that supports it — verify before you trust.
+- **Deterministic eval.** Precision / recall / F1 with 1000-resample **bootstrap confidence intervals**, recomputed from committed fixtures — byte-for-byte reproducible, zero API keys, zero network.
+
+Honest caveat: the demo replays the pipeline's deterministic phases over the bundled synthetic fixture in `docs/fixtures/`. The live pipeline with real LLM extraction needs an OpenRouter key:
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...
+uv run python3 main.py -i data/raw/synthetic_workplace_survey.csv
+```
 
 ---
 
 ## What it does
 
-Given a CSV / TXT / PDF / DOCX of open-ended survey or interview responses, the
-pipeline produces a **consolidated causal model** with:
+QualModel is a research instrument, not a chatbot. Given a CSV / TXT / PDF / DOCX of open-ended survey or interview responses, it produces a **consolidated causal model**:
 
-- typed **variables**, **relationships**, **hypotheses**, and **moderators**;
-- a **supporting quote** + chunk id for every extracted claim (provenance);
-- a **structural-coverage** score and a **testability** score;
-- **clarification questions** for the gaps the model still has;
-- a **contradiction report** when claims disagree across responses;
-- a **literature-validation report** scoring each hypothesis as supported,
-  contested, or novel against an automatically-built literature corpus;
-- exports to **YAML model spec**, **Mermaid causal graph**, **HTML graph**,
-  **Markdown evidence report**, **JSON bundle**, and **DOCX appendix**.
-
-It is built around an **8-phase pipeline** with two persistent ChromaDB vector
-stores (one for the survey itself, one for retrieved literature), iterative
-refinement, and a deterministic consolidation step.
+- **8-phase pipeline**: ingest & chunk → literature RAG → per-chunk extraction → gap detection → clarification planning → refinement loop → consolidation → exports.
+- **Quote-level provenance on every claim** — each relationship and hypothesis carries its supporting verbatim quote and chunk id, so a researcher can audit the model instead of trusting it.
+- **Typed output**: variables, relationships, hypotheses, and moderators as Pydantic models; contradictions flagged when claims disagree across responses.
+- **What it doesn't know**: structural-coverage and testability scores, plus researcher-routed clarification questions for the gaps.
+- **Literature validation**: hypotheses scored supported / contested / novel against an automatically built corpus (PubMed + Semantic Scholar) when enabled.
+- **Exports**: YAML model spec, Mermaid graph, HTML graph, Markdown evidence report, JSON bundle, and DOCX appendix.
+- **Built-in accountability**: versioned prompt registry (sha256), per-run `runlog.json` freezing prompts, lockfile hash, and git commit, and a deterministic eval harness with bootstrap CIs.
 
 ---
 
-## How the pipeline works
+## How it works
 
 ```
-  ┌────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-  │ 1. Ingest +    │ → │ 2. Literature    │ → │ 3. Per-chunk     │
-  │    chunk       │   │    RAG (PubMed,  │   │    extraction    │
-  │    + embed     │   │    SemScholar)   │   │    (typed JSON)  │
-  └────────────────┘   └──────────────────┘   └────────┬─────────┘
-                                                       │
-                                                       ▼
-  ┌────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-  │ 8. Final       │ ← │ 7. Consolidate + │ ← │ 4. Cross-chunk   │
-  │    exports     │   │    contradict    │   │    gap detection │
-  │    (YAML, MD,  │   │    + literature  │   │                  │
-  │    HTML, DOCX) │   │    validation    │   │                  │
-  └────────────────┘   └──────────────────┘   └────────┬─────────┘
-                                                       │
-                                ┌──────────────────────┴──────┐
-                                ▼                             ▼
-                       ┌────────────────┐            ┌────────────────┐
-                       │ 5. Clarification│           │ 6. Refinement  │
-                       │    planning    │            │    loop        │
-                       │    (auto-answer│            │    (≤ N iters) │
-                       │    from lit)   │            │                │
-                       └────────────────┘            └────────────────┘
+survey text → ingest & chunk → literature RAG → per-chunk LLM extraction → gap detection
+     → clarification planning → refinement loop → consolidation & contradiction check
+     → literature validation → exports (YAML / Mermaid / HTML / Markdown / JSON / DOCX)
 ```
 
-| # | Phase | What it does | Key file |
-|---|-------|--------------|----------|
-| 1 | Ingest & chunk | Parse CSV/TXT/PDF/DOCX, clean, dedupe, chunk to ~500 tokens, embed, store in `data/chroma/survey/` | [src/llm_survey/utils/preprocess.py](src/llm_survey/utils/preprocess.py) |
-| 2 | Literature RAG | Topic-query → PubMed + Semantic Scholar → embed → `data/chroma/literature/` | [src/llm_survey/rag/](src/llm_survey/rag/) |
-| 3 | Per-chunk extraction | LLM call with `instructor` for typed JSON (`ChunkExtractionResult`), grounded in chunk text + retrieved context | [rag_pipeline.py:`extract_model_from_chunk`](src/llm_survey/rag_pipeline.py) |
-| 4 | Gap detection | Aggregate per-chunk gaps → structural-coverage score + testability score | [src/llm_survey/agents/gap_detection.py](src/llm_survey/agents/gap_detection.py) |
-| 5 | Clarification planning | Turn gaps into questions; auto-answer some from the literature store | [src/llm_survey/agents/clarification.py](src/llm_survey/agents/clarification.py) |
-| 6 | Refinement loop | Re-run extraction with clarification answers as context, ≤ N iterations or until coverage threshold met | [rag_pipeline.py:`run_refinement_loop`](src/llm_survey/rag_pipeline.py) |
-| 7 | Consolidation | Merge chunk-level extractions; detect contradictions; literature-validate hypotheses | [src/llm_survey/agents/consolidation.py](src/llm_survey/agents/consolidation.py) |
-| 8 | Final exports | YAML model spec, Mermaid graph, HTML graph, evidence report, JSON bundle, DOCX | [src/llm_survey/utils/export_reports.py](src/llm_survey/utils/export_reports.py) |
-
-Architectural deep-dive: [ARCHITECTURE.md](ARCHITECTURE.md). Full method docs: [docs/](docs/).
+Every extracted claim is born inside a chunk with its verbatim quote attached, and that provenance survives consolidation, contradiction detection, and every export. Prompts are versioned and pinned; decoding is `temperature=0` with a fixed seed; so the deterministic phases are byte-reproducible from a commit. Architectural deep-dive: [ARCHITECTURE.md](ARCHITECTURE.md). Method docs: [docs/](docs/).
 
 ---
 
-## Quickstart
+## Quick facts
 
-### Prerequisites
-
-- Python ≥ 3.10
-- An OpenRouter API key (free tier works for the synthetic demo)
-
-### Install
-
-```bash
-git clone https://github.com/haseebraza715/QualModel.git
-cd QualModel
-make install        # editable install + dev tooling (ruff, black, mypy, pytest, hypothesis)
-```
-
-### Run the pipeline
-
-```bash
-export OPENROUTER_API_KEY=sk-or-...
-python3 main.py --input data/raw/synthetic_workplace_survey.csv
-```
-
-Outputs land in `outputs/`:
-
-```
-outputs/
-├── extracted_models.json           # raw per-chunk extractions
-├── cross_chunk_gap_report.json     # gaps + structural-coverage score
-├── clarification_plan.json         # follow-up questions + literature answers
-├── consolidated_model.json         # merged model
-├── conflict_report.json            # contradictions
-├── literature_validation_report.json
-├── final_model_spec.yaml           # ← human-reviewable spec
-├── mermaid_graph.md                # ← causal diagram
-├── evidence_report.md              # ← claim → quote audit trail
-├── cost_report.json                # per-phase tokens + USD estimate (NEW)
-├── runlog.json                     # prompt sha256s + git commit + lockfile hash (NEW)
-└── comprehensive_report.json
-```
-
-### Common flags
-
-```bash
-python3 main.py --input X.csv --no-literature       # skip PubMed/SemScholar, run offline
-python3 main.py --input X.csv --no-refinement       # one-shot, no iterative loop
-python3 main.py --input X.csv --interactive         # prompt for options
-python3 main.py --create-sample                     # print path to bundled synthetic survey
-```
-
-### Streamlit dashboard
-
-```bash
-python3 -m streamlit run app.py
-```
-
-The dashboard is **bring-your-own-key** — paste your OpenRouter key in the
-sidebar; it is held in session only and never written to disk.
-
-### Offline smoke test (no API key required)
-
-```bash
-python3 scripts/smoke_offline.py
-```
-
-The live end-to-end smoke is `python3 scripts/smoke_e2e.py`; it performs model
-calls and requires `OPENROUTER_API_KEY`.
+| | |
+|---|---|
+| **Language** | Python ≥ 3.10 |
+| **Dependencies** | Exact pins in `pyproject.toml` + `requirements.txt`; hash-locked env in `requirements.lock` and `uv.lock` |
+| **Offline paths** | `./scripts/demo.sh` (no key, no network); `uv run python3 scripts/smoke_offline.py`; `make eval` |
+| **Determinism** | `temperature=0`, fixed seed, versioned prompt sha256s, CI runs eval twice and asserts byte-equal output |
+| **License** | MIT |
 
 ---
 
 ## Reproducibility
 
-This is the part most research codebases get wrong. Here is what's pinned and
-how to verify it:
+This is the part most research codebases get wrong:
 
 | Layer | What it freezes | Where |
 |---|---|---|
 | Direct dependencies | Exact version pins | [pyproject.toml](pyproject.toml), [requirements.txt](requirements.txt) |
-| Transitive dependencies | Hash-locked Python environment (regenerate with the command in its header) | [requirements.lock](requirements.lock) |
-| Prompts | Versioned `.md` with sha256 + frontmatter (author, date, change rationale) | [src/llm_survey/prompts/registry/](src/llm_survey/prompts/registry/) |
+| Transitive dependencies | Hash-locked Python environment | [requirements.lock](requirements.lock), [uv.lock](uv.lock) |
+| Prompts | Versioned `.md` with sha256 + frontmatter | [src/llm_survey/prompts/registry/](src/llm_survey/prompts/registry/) |
 | Decoding | `temperature=0.0` default, fixed seed | [src/llm_survey/config.py](src/llm_survey/config.py) |
-| Run provenance | Per-run `runlog.json` with prompt sha256s, git commit, lockfile hash, model id, embedding model | [src/llm_survey/eval/runlog.py](src/llm_survey/eval/runlog.py) |
+| Run provenance | Per-run `runlog.json`: prompt sha256s, git commit, lockfile hash | [src/llm_survey/eval/runlog.py](src/llm_survey/eval/runlog.py) |
 | Determinism CI | Eval runs twice, asserts byte-equal output | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 
-### One-command reproduction
-
 ```bash
-make reproduce
+make reproduce     # install + offline eval → docs/evaluation_metrics.json
 ```
 
-That runs the documented offline fixture reproduction. The offline `make eval` recomputes
-[docs/evaluation_metrics.json](docs/evaluation_metrics.json) — including
-1000-resample bootstrap CIs and per-chunk variance — without any API calls,
-using bundled fixtures in [docs/fixtures/](docs/fixtures/). End-to-end
-reproduction (with real LLM calls) requires `OPENROUTER_API_KEY`.
+The offline eval recomputes [docs/evaluation_metrics.json](docs/evaluation_metrics.json) — bootstrap CIs and per-chunk variance included — from bundled fixtures with zero API calls. End-to-end reproduction (real LLM calls) requires `OPENROUTER_API_KEY`. Detailed recipe and expected runtime: [REPRODUCE.md](REPRODUCE.md).
 
-Detailed recipe, expected runtime, and cost: [REPRODUCE.md](REPRODUCE.md).
-
-### Diffing two runs
+Diff two runs to spot drift:
 
 ```bash
 diff -u outputs_run_A/runlog.json outputs_run_B/runlog.json
 ```
 
-Any non-trivial diff indicates a reproducibility risk: a prompt was edited, a
-dependency drifted, or someone ran with a dirty git tree.
+Any non-trivial diff means a prompt was edited, a dependency drifted, or the tree was dirty.
 
 ---
 
 ## Evaluation
 
-The eval harness compares extracted relationships against a hand-coded gold
-file using a **lemmatized, word-boundary-aware matcher** (no naive substring
-matching — see [src/llm_survey/eval/matching.py](src/llm_survey/eval/matching.py)).
-
-### Run it
-
-```bash
-make eval
-# or directly:
-python3 scripts/compute_eval_metrics.py
-```
-
-Output (synthetic fixture, deterministic):
+The harness compares extracted relationships against a hand-coded gold file with a lemmatized, word-boundary-aware matcher ([src/llm_survey/eval/matching.py](src/llm_survey/eval/matching.py)). On the bundled synthetic fixture (deterministic, no API calls):
 
 ```json
 {
-  "gold_items": 9,
-  "true_positives_matched_gold": 9,
-  "false_positives": 1,
-  "precision": 0.9,
-  "recall": 1.0,
-  "f1": 0.947,
+  "gold_items": 9, "extracted_relationships": 10,
+  "precision": 0.9, "recall": 1.0, "f1": 0.947,
   "bootstrap_ci_95": {
-    "precision": { "ci_lo": 0.7, "ci_hi": 1.0, "n_resamples": 1000 },
-    "recall":    { "ci_lo": 1.0, "ci_hi": 1.0, "n_resamples": 1000 },
-    "f1":        { "ci_lo": 0.82, "ci_hi": 1.0, "n_resamples": 1000 }
+    "precision": { "point": 0.9, "ci_lo": 0.7, "ci_hi": 1.0 },
+    "recall":    { "point": 1.0, "ci_lo": 1.0, "ci_hi": 1.0 },
+    "f1":        { "point": 0.9474, "ci_lo": 0.8235, "ci_hi": 1.0 }
   },
-  "per_chunk_variance": { ... }
+  "per_chunk_variance": { "f1": { "n": 5, "mean": 0.9714, "std": 0.0571 } }
 }
 ```
-
-### Gold-file schema
-
-```jsonc
-{
-  "relationships": [
-    {
-      "id": "GF01",
-      "respondent_hint": "respondent_1",
-      "from_aliases": ["workload", "deadline pressure"],   // NEW: alias schema
-      "to_aliases": ["stress", "overwhelmed"]
-    }
-  ]
-}
-```
-
-The legacy `from_substrings` / `to_substrings` schema still works for backward
-compatibility, but new gold should use `*_aliases` (full canonical labels —
-the matcher handles morphology via lightweight lemmatization).
-
-More: [docs/evaluation.md](docs/evaluation.md), [docs/structural-coverage-score.md](docs/structural-coverage-score.md).
-
----
-
-## Ablation studies
-
-Run the full ablation matrix on the synthetic corpus:
 
 ```bash
-make ablation
-# or, with custom variants:
-python3 scripts/run_ablation.py --variant full_pipeline --variant no_literature_rag
+make eval          # or: uv run python3 scripts/compute_eval_metrics.py
+make ablation      # variant matrix on the synthetic corpus
 ```
 
-| Variant | What it tests |
-|---|---|
-| `full_pipeline` | Baseline (all phases enabled) |
-| `no_literature_rag` | Does external evidence improve extraction? |
-| `no_refinement` | Is iterative refinement worth the latency? |
-| `no_rag` | Is *any* retrieval context better than none? |
-| `single_pass_baseline` | Naive one-shot LLM call — what does scaffolding actually buy? |
-
-Results land in `outputs/ablation/ablation_results.json` with per-variant F1
-deltas vs. baseline and wall-clock cost. No versioned ablation output is
-currently committed, so ablation quality/cost results are **UNVERIFIED** until
-a run artifact records model, input, prompt, lockfile, and commit hashes.
+Docs: [docs/evaluation.md](docs/evaluation.md), [docs/structural-coverage-score.md](docs/structural-coverage-score.md).
 
 ---
 
 ## Configuration
 
-All settings have safe defaults; you only need to set `OPENROUTER_API_KEY`.
-
-### `.env` file
-
-```bash
-cp .env.example .env
-# edit .env to set keys
-```
-
-### Environment variables (alphabetical)
+Everything has a safe default; you only need `OPENROUTER_API_KEY` for the live path. `cp .env.example .env`, or set variables directly:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `OPENROUTER_API_KEY` | *(required)* | OpenRouter / OpenAI-compatible API key |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | API base URL |
+| `OPENROUTER_API_KEY` | *(required for live)* | OpenRouter / OpenAI-compatible API key |
 | `LLM_MODEL` | `google/gemma-4-31b-it` | Default model |
-| `LLM_TEMPERATURE` | `0.0` | Decoding temperature (default 0 for determinism) |
+| `LLM_TEMPERATURE` | `0.0` | Decoding temperature (0 for determinism) |
 | `LLM_SEED` | `20260101` | RNG seed for bootstrap CIs |
-| `EMBEDDING_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | Embedder used for both chroma stores |
+| `EMBEDDING_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | Embedder for both chroma stores |
 | `ENABLE_LITERATURE_RETRIEVAL` | `true` | Toggle PubMed + SemanticScholar fetch |
 | `ENABLE_REFINEMENT_LOOP` | `true` | Toggle iterative refinement |
-| `MAX_REFINEMENT_ITERATIONS` | `2` | Refinement loop cap |
-| `COMPLETENESS_THRESHOLD` | `0.75` | Early-stop threshold for refinement |
-| `LITERATURE_TARGET_PAPERS` | `20` | Cap on retrieved papers |
-| `HTTP_REFERER`, `X_TITLE` | empty | Optional OpenRouter attribution headers |
-| `HF_TOKEN` | empty | For gated embedding models / HF Space sync |
+| `HF_TOKEN` | empty | Gated embedding models / HF Space sync |
 
-The typed config object is at [src/llm_survey/config.py](src/llm_survey/config.py)
-(`pydantic-settings`).
+Typed settings (pydantic-settings): [src/llm_survey/config.py](src/llm_survey/config.py).
 
 ---
 
@@ -322,104 +150,43 @@ The typed config object is at [src/llm_survey/config.py](src/llm_survey/config.p
 
 ```
 .
-├── pyproject.toml                     # packaging + lint/type config
-├── requirements.txt / requirements.lock
-├── Makefile                           # install / lint / test / eval / ablation / reproduce
-├── REPRODUCE.md                       # reproduction recipe
-├── NEXT_STEPS.md                      # punch list of known weaknesses
-├── RESEARCH_PLAN.md                   # roadmap to publication-grade
-├── ARCHITECTURE.md                    # architectural overview
-├── main.py                            # CLI entry
-├── app.py                             # Streamlit entry
+├── pyproject.toml / requirements.txt / requirements.lock / uv.lock
+├── Makefile                       # install / lint / test / eval / ablation / reproduce
+├── main.py                        # CLI entry
+├── app.py                         # Streamlit entry (bring-your-own-key dashboard)
 ├── src/llm_survey/
-│   ├── config.py                      # typed Settings (pydantic-settings)
-│   ├── rag_pipeline.py                # RAGModelExtractor — pipeline orchestrator
-│   ├── topic_analysis.py              # BERTopic + KeyBERT
-│   ├── logging_config.py              # structlog setup
-│   ├── agents/                        # ClarificationAgent, ModelConsolidator, …
-│   ├── rag/                           # SurveyStore, LiteratureStore, embedder, …
-│   ├── prompts/
-│   │   ├── registry.py                # versioned prompt loader
-│   │   └── registry/v1.0/*.md         # prompts with frontmatter + sha256
-│   ├── schemas/                       # Pydantic schemas
-│   ├── eval/
-│   │   ├── stats.py                   # bootstrap CIs, McNemar, paired bootstrap
-│   │   ├── matching.py                # alias-aware lemmatized gold matcher
-│   │   ├── ablation.py                # ablation matrix runner
-│   │   ├── cost.py                    # per-phase token/cost recorder
-│   │   └── runlog.py                  # provenance run-log
-│   └── utils/                         # preprocess, prompt_safety, export_reports, …
-├── scripts/
-│   ├── compute_eval_metrics.py        # main eval entrypoint
-│   ├── run_ablation.py                # ablation CLI
-│   ├── smoke_e2e.py                   # end-to-end smoke
-│   └── push_hf_space.py               # HF Space deploy
-├── tests/                             # pytest; offline suite + credential-gated live tests
-├── docs/                              # method docs, eval gold, fixtures, runbooks
-├── ui/dashboard.py                    # Streamlit dashboard
-├── data/raw/                          # synthetic_workplace_survey.csv
-└── .github/workflows/                 # CI: lint + typecheck + eval-stability
+│   ├── config.py                  # typed Settings
+│   ├── rag_pipeline.py            # pipeline orchestrator
+│   ├── agents/                    # gap detection, clarification, consolidation
+│   ├── rag/                       # survey + literature vector stores
+│   ├── prompts/registry/          # versioned prompts with sha256
+│   ├── schemas/                   # Pydantic schemas
+│   ├── eval/                      # bootstrap stats, gold matcher, runlog, cost
+│   └── utils/                     # preprocess, prompt_safety, export_reports
+├── scripts/                       # demo.sh, eval, ablation, smokes, HF deploy
+├── tests/                         # offline pytest suite + credential-gated live tests
+├── docs/                          # method docs, fixtures, evaluation gold
+├── data/raw/                      # synthetic_workplace_survey.csv
+└── .github/workflows/             # CI: lint + typecheck + eval-stability
 ```
 
 ---
 
 ## What's still missing
 
-The pipeline works but is not yet "best-in-class research tool" per
-[RESEARCH_PLAN.md §9](RESEARCH_PLAN.md). The honest punch list is in
-[NEXT_STEPS.md](NEXT_STEPS.md). The biggest gaps:
-
-- **Multi-corpus evaluation.** Only the synthetic corpus is bundled. Real HCI /
-  health / product corpora need to be obtained, licensed, and ingested.
-- **Inter-rater reliability.** The gold file is single-coder; Cohen's κ /
-  Krippendorff's α are not yet measured.
-- **Human evaluation.** No blind pairwise comparison or hallucination audit
-  (RESEARCH_PLAN §1.6).
-- **Retrieval-quality eval.** Recall@k / nDCG for the survey + literature
-  stores is not yet wired.
-- **Calibrated uncertainty.** Per-edge confidence is not yet calibrated against
-  gold.
-- **Ethics / IRB / bias audit.** Demographic-disparity measurement is not yet
-  implemented.
-
-Pull requests on any of these are welcome.
+Honest punch list: [NEXT_STEPS.md](NEXT_STEPS.md); roadmap: [docs/agentic_research_assistant_plan.md](docs/agentic_research_assistant_plan.md). Biggest gaps: multi-corpus evaluation (only the synthetic corpus is bundled), inter-rater reliability (single-coder gold), human/hallucination audits, retrieval-quality eval (Recall@k / nDCG), calibrated uncertainty, and an ethics / IRB / bias audit. PRs welcome.
 
 ---
 
 ## Deploying to Hugging Face Spaces
 
-The repo is shaped for **CPU Basic** + **Docker** SDK. The YAML block at the
-top of this file is the Space card. **Do not** add an OpenRouter secret to the
-Space — users paste their own key in the UI.
-
-### One-shot push from your laptop
-
-```bash
-export HF_TOKEN="hf_…"   # or HUGGING_FACE_HUB_TOKEN
-export HF_SPACE_REPO="yourname/qualitative-model-drafter"
-
-pip install "huggingface_hub>=0.26.0"
-python3 scripts/push_hf_space.py
-# If API create returns 403, create the Space once in the HF UI (Docker), then:
-# HF_SPACE_REPO=you/name python3 scripts/push_hf_space.py --upload-only
-```
-
-### GitHub Actions (optional)
-
-Set repo secrets `HF_TOKEN` and `HF_SPACE_REPO`; merges to `main` trigger
-[.github/workflows/deploy-hf-space.yml](.github/workflows/deploy-hf-space.yml).
-
-Full notes: [docs/deploy-hf.md](docs/deploy-hf.md).
+Space card lives in [.hf-space-card.yml](.hf-space-card.yml); the repo targets CPU Basic + Docker. Do **not** add an OpenRouter secret to the Space — users paste their own key in the UI. One-shot push: `HF_TOKEN=... HF_SPACE_REPO=you/qualitative-model-drafter python3 scripts/push_hf_space.py`. Full notes: [docs/deploy-hf.md](docs/deploy-hf.md).
 
 ---
 
 ## Citing
 
-A citable artifact (Zenodo DOI + paper) is in flight. Until then, please cite
-the repo URL and the git commit hash.
-
-A `CITATION.cff` file will be added once the paper is published. To track
-progress, see [RESEARCH_PLAN.md §6](RESEARCH_PLAN.md).
+A citable artifact (Zenodo DOI + paper) is in flight. Until then, cite the repo URL and the git commit hash.
 
 ---
 
