@@ -15,6 +15,8 @@ pandas==2.2.3
 numpy==1.26.4
 pyyaml==6.0.2
 pydantic==2.10.6
+pydantic-settings==2.14.2
+structlog==24.4.0
 streamlit==1.41.1
 plotly==5.24.1
 python-dotenv==1.0.1
