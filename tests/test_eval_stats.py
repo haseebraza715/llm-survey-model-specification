@@ -1,9 +1,12 @@
 """Unit tests for `llm_survey.eval.stats` — bootstrap CIs, McNemar, paired bootstrap."""
+
 from __future__ import annotations
 
 from llm_survey.eval.stats import (
     bootstrap_metric,
     bootstrap_prf1,
+    cohen_kappa,
+    edge_set_jaccard,
     mcnemar_exact,
     paired_bootstrap_diff,
     per_document_variance,
@@ -102,3 +105,15 @@ def test_per_document_variance_basic_stats() -> None:
     assert abs(out["precision"]["mean"] - 0.5) < 1e-6
     assert out["precision"]["min"] == 0.0
     assert out["precision"]["max"] == 1.0
+
+
+def test_cohen_kappa_importable_and_deterministic() -> None:
+    a = {"x", "y"}
+    b = {"x", "z"}
+    assert cohen_kappa(a, b) == cohen_kappa(a, b)
+    assert cohen_kappa(a, b)["cohen_kappa"] == cohen_kappa(a, b)["cohen_kappa"]
+
+
+def test_edge_set_jaccard_importable() -> None:
+    res = edge_set_jaccard({"a", "b"}, {"b", "c"})
+    assert res["jaccard"] == round(1 / 3, 6)

@@ -62,7 +62,7 @@ def _lemmatize(token: str) -> str:
     return token
 
 
-_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z\-]*")
+_TOKEN_RE = re.compile(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")
 
 
 def normalize(text: str) -> list[str]:
@@ -97,6 +97,29 @@ def _matches_alias_list(extracted_variable: str, aliases: Iterable[str]) -> bool
     return any(_phrase_in_tokens(alias, tokens) for alias in aliases if alias)
 
 
+def _split_hyphenated(tokens: list[str]) -> list[str]:
+    """Expand hyphenated tokens so 'self-confidence' == 'self confidence' at the token level."""
+    out: list[str] = []
+    for token in tokens:
+        out.extend(token.split("-"))
+    return out
+
+
+def exact_variable_match(exact_variable: str, extracted_variable: str) -> bool:
+    """True iff `exact_variable` equals `extracted_variable` token-for-token under normalization.
+
+    Used by the strict gold schema: an exact `from_variable` / `to_variable` in
+    the gold file must match the extracted variable name *exactly* (lemmatized,
+    case- and punctuation-insensitive) — not merely contain it. Hyphen
+    differences ('self-confidence' vs 'self confidence') are treated as equal;
+    empty or non-alpha strings never match.
+    """
+    exact_tokens = normalize(exact_variable)
+    if not exact_tokens:
+        return False
+    return _split_hyphenated(exact_tokens) == _split_hyphenated(normalize(extracted_variable))
+
+
 def relationship_matches(
     rel: dict,
     gold: dict,
@@ -110,23 +133,41 @@ def relationship_matches(
         {
           "id": str,
           "respondent_hint": str (optional; substring match on chunk_id),
+          "from_variable": str (optional; exact normalized match — strict schema),
+          "to_variable":   str (optional; exact normalized match — strict schema),
           "from_aliases": [str, ...] OR "from_substrings": [str, ...],
           "to_aliases":   [str, ...] OR "to_substrings":   [str, ...],
         }
+
+    Match precedence per endpoint: exact `*_variable` > `*_aliases` >
+    `*_substrings`. Gold files that only use aliases/substrings (the bundled
+    fixture) behave exactly as before — this is additive.
     """
     hint = str(gold.get("respondent_hint", "")).lower()
     cid = str(rel.get("chunk_id", "")).lower()
     if hint and hint not in cid:
         return False
 
+    from_variable = str(rel.get("from_variable", ""))
+    to_variable = str(rel.get("to_variable", ""))
     from_terms = list(gold.get("from_aliases") or gold.get("from_substrings") or [])
     to_terms = list(gold.get("to_aliases") or gold.get("to_substrings") or [])
-    if not from_terms or not to_terms:
+    if not from_terms and not to_terms and not gold.get("from_variable") and not gold.get("to_variable"):
         return False
 
-    return _matches_alias_list(rel.get("from_variable", ""), from_terms) and _matches_alias_list(
-        rel.get("to_variable", ""), to_terms
+    exact_from = gold.get("from_variable")
+    exact_to = gold.get("to_variable")
+    from_ok = (
+        exact_variable_match(exact_from, from_variable)
+        if exact_from
+        else _matches_alias_list(from_variable, from_terms)
     )
+    to_ok = (
+        exact_variable_match(exact_to, to_variable)
+        if exact_to
+        else _matches_alias_list(to_variable, to_terms)
+    )
+    return from_ok and to_ok
 
 
-__all__ = ["normalize", "relationship_matches"]
+__all__ = ["exact_variable_match", "normalize", "relationship_matches"]

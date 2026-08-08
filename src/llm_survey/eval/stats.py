@@ -203,6 +203,98 @@ def mcnemar_exact(b: int, c: int) -> dict[str, float | int]:
     return {"b": b, "c": c, "n_disagreements": n, "p_value": round(p_two_sided, 4)}
 
 
+def cohen_kappa(
+    a: Iterable[str],
+    b: Iterable[str],
+    *,
+    universe: Iterable[str] | None = None,
+) -> dict[str, float | int]:
+    """Cohen's kappa for two raters coding a set of edges as present/absent.
+
+    Each edge key is a string (e.g. `(respondent_hint, from, to)`). `a` / `b`
+    are the sets of edges each coder marked present.
+
+    Universe convention (documented so the number is not misread): when
+    `universe` is omitted, the countable universe is the *union* of the edges
+    proposed by either coder — only edges that at least one coder surfaced are
+    eligible, so "agreement on absence" is never credited. Pass an explicit
+    `universe` (e.g. every candidate edge a coder could have proposed) to also
+    credit agreement on edges neither coder marked.
+
+    Returns the contingency cells plus observed/expected agreement and kappa.
+    Pure and deterministic; undefined cases use documented conventions
+    (both coders empty -> kappa 1.0; both code every edge -> kappa 1.0).
+    """
+    set_a = set(a)
+    set_b = set(b)
+    universe_set = set(universe) if universe is not None else (set_a | set_b)
+
+    n = len(universe_set)
+    if n == 0:
+        return {
+            "n": 0,
+            "n_a": 0,
+            "n_b": 0,
+            "n_both": 0,
+            "n_only_a": 0,
+            "n_only_b": 0,
+            "n_neither": 0,
+            "observed_agreement": 1.0,
+            "expected_agreement": 1.0,
+            "cohen_kappa": 1.0,
+        }
+
+    n_a = len(set_a & universe_set)
+    n_b = len(set_b & universe_set)
+    n_both = len(set_a & set_b & universe_set)
+    n_only_a = n_a - n_both
+    n_only_b = n_b - n_both
+    n_neither = n - n_a - n_b + n_both
+
+    p_a = n_a / n
+    p_b = n_b / n
+    p_o = (n_both + n_neither) / n
+    p_e = p_a * p_b + (1.0 - p_a) * (1.0 - p_b)
+
+    denom = 1.0 - p_e
+    if abs(denom) < 1e-12:
+        kappa = 1.0 if abs(p_o - 1.0) < 1e-12 else 0.0
+    else:
+        kappa = (p_o - p_e) / denom
+
+    return {
+        "n": n,
+        "n_a": n_a,
+        "n_b": n_b,
+        "n_both": n_both,
+        "n_only_a": n_only_a,
+        "n_only_b": n_only_b,
+        "n_neither": n_neither,
+        "observed_agreement": round(p_o, 6),
+        "expected_agreement": round(p_e, 6),
+        "cohen_kappa": round(kappa, 6),
+    }
+
+
+def edge_set_jaccard(a: Iterable[str], b: Iterable[str]) -> dict[str, float | int]:
+    """Jaccard index over two raters' edge sets: |A and B| / |A or B|.
+
+    Suitable as a plain (non-chance-corrected) agreement metric for multilabel
+    edge sets. Convention: two empty sets agree perfectly (jaccard 1.0).
+    """
+    set_a = set(a)
+    set_b = set(b)
+    union = set_a | set_b
+    inter = set_a & set_b
+    if not union:
+        return {"union_size": 0, "intersection_size": 0, "jaccard": 1.0}
+    return {
+        "union_size": len(union),
+        "intersection_size": len(inter),
+        "jaccard": round(len(inter) / len(union), 6),
+    }
+
+
 def per_document_variance(per_doc_metrics: Iterable[dict[str, float]]) -> dict[str, dict[str, float]]:
     """Given an iterable of {metric_name: value} dicts, one per document, return mean/std/min/max per metric."""
     rows = list(per_doc_metrics)
@@ -228,6 +320,8 @@ __all__ = [
     "BootstrapResult",
     "bootstrap_metric",
     "bootstrap_prf1",
+    "cohen_kappa",
+    "edge_set_jaccard",
     "mcnemar_exact",
     "paired_bootstrap_diff",
     "per_document_variance",

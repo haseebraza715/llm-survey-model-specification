@@ -1,4 +1,5 @@
 """Tests for the alias-aware gold matcher."""
+
 from __future__ import annotations
 
 from llm_survey.eval.matching import normalize, relationship_matches
@@ -18,6 +19,11 @@ def test_normalize_strips_punctuation() -> None:
     assert "hello" in out and "world" in out
     assert "_" not in "".join(out)
     assert "!" not in "".join(out)
+
+
+def test_normalize_preserves_numeric_magnitudes() -> None:
+    assert normalize("wind gusts to 58 mph") != normalize("wind gusts to 50 mph")
+    assert "58" in normalize("wind gusts to 58 mph")
 
 
 def test_alias_match_basic() -> None:
@@ -114,3 +120,63 @@ def test_aliases_take_precedence_over_substrings() -> None:
 def test_empty_terms_returns_false() -> None:
     rel = {"chunk_id": "x", "from_variable": "a", "to_variable": "b"}
     assert relationship_matches(rel, {}) is False
+
+
+def test_exact_variable_match_normalized_equality() -> None:
+    """Strict schema: exact from_variable/to_variable match token-for-token."""
+    rel = {
+        "chunk_id": "respondent_1_chunk_0",
+        "from_variable": "Workload",
+        "to_variable": "Stress",
+    }
+    gold = {
+        "respondent_hint": "respondent_1",
+        "from_variable": "workload",
+        "to_variable": "stress",
+    }
+    assert relationship_matches(rel, gold) is True
+
+
+def test_exact_variable_match_case_and_punctuation_insensitive() -> None:
+    rel = {
+        "chunk_id": "respondent_1_chunk_0",
+        "from_variable": "Manager guidance",
+        "to_variable": "Self-confidence at work",
+    }
+    gold = {
+        "respondent_hint": "respondent_1",
+        "from_variable": "MANAGER GUIDANCE!",
+        "to_variable": "self confidence at working",
+    }
+    assert relationship_matches(rel, gold) is True
+
+
+def test_exact_variable_match_requires_full_equality_not_substring() -> None:
+    rel = {
+        "chunk_id": "respondent_1_chunk_0",
+        "from_variable": "Workload and deadlines",
+        "to_variable": "Stress",
+    }
+    gold = {
+        "respondent_hint": "respondent_1",
+        "from_variable": "workload",  # substring of extracted, but not exact -> no match
+        "to_variable": "stress",
+    }
+    assert relationship_matches(rel, gold) is False
+
+
+def test_exact_variable_takes_precedence_over_aliases() -> None:
+    rel = {
+        "chunk_id": "respondent_1_chunk_0",
+        "from_variable": "Workload",
+        "to_variable": "Stress",
+    }
+    gold = {
+        "respondent_hint": "respondent_1",
+        "from_variable": "something_else",
+        "from_aliases": ["workload"],  # would match if aliases were consulted
+        "to_variable": "stress",
+        "to_aliases": ["stress"],
+    }
+    # Exact from_variable must win: 'workload' != 'something_else' -> False.
+    assert relationship_matches(rel, gold) is False
