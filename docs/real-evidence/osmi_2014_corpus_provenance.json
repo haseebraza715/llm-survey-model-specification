@@ -1,0 +1,15 @@
+{
+  "corpus_sha256": "8bf7ceaf5c19745891d7dcc8c03bbfd26920c7cb6827b4d5d572a89b76931289",
+  "edits": "No text edits; selection and pseudonymous speaker_id assignment only.",
+  "license": "CC BY-SA 4.0 per the Figshare record description; the API license field reports CC BY 4.0, so this subset follows the more restrictive BY-SA terms",
+  "retrieved_at": "2026-08-09",
+  "row_count": 40,
+  "sampling_procedure": "From comments with at least 40 characters, excluding NA-like values and rows matching email, URL, or phone patterns, select the first 40 by SHA-256 of the verbatim comment text. IDs encode source CSV row numbers.",
+  "source": {
+    "download_url": "https://ndownloader.figshare.com/files/9700783",
+    "figshare_file_id": 9700783,
+    "name": "OSMI Mental Health in Tech Survey \u2014 2014 comments",
+    "source_sha256": "3c4e3e16917f74b5e219ba01caecd09f9dc464c4848becdd018c9442d627abb4",
+    "url": "https://figshare.com/articles/dataset/OSMI_Mental_Health_in_Tech_Survey/5579458"
+  }
+}
