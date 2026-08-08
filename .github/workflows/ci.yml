@@ -53,6 +53,7 @@ jobs:
             src/llm_survey/eval/cost.py \
             src/llm_survey/eval/runlog.py \
             src/llm_survey/eval/matching.py \
+            src/llm_survey/eval/gold_contract.py \
             src/llm_survey/config.py \
             src/llm_survey/prompts/registry.py \
             src/llm_survey/logging_config.py
@@ -63,6 +64,9 @@ jobs:
             tests/test_eval_stats.py \
             tests/test_eval_cost_runlog.py \
             tests/test_eval_matching.py \
+            tests/test_gold_contract.py \
+            tests/test_agreement.py \
+            tests/test_corpus_validator.py \
             tests/test_prompt_registry.py \
             tests/test_config.py
 

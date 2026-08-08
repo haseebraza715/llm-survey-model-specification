@@ -37,6 +37,7 @@ MYPY_SCOPE = \
 	src/llm_survey/eval/cost.py \
 	src/llm_survey/eval/runlog.py \
 	src/llm_survey/eval/matching.py \
+	src/llm_survey/eval/gold_contract.py \
 	src/llm_survey/config.py \
 	src/llm_survey/prompts/registry.py \
 	src/llm_survey/logging_config.py
