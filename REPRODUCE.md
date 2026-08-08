@@ -4,6 +4,11 @@ This file documents how to reproduce the deterministic fixture numbers in
 `docs/evaluation_metrics.json`. No versioned ablation artifact is currently
 committed; live ablation results are therefore **UNVERIFIED**.
 
+The two-coder agreement spine is offline and byte-deterministic; see
+`docs/agreement-eval.md`. The repository now contains a pinned NOAA corpus and
+two blind DeepSeek coder files. Their result measures AI-session agreement only;
+two independent human coders are still required for human reliability.
+
 ## Hardware / runtime expectations
 
 | Stage | Wall clock (synthetic, 20 rows) | Cost (USD, indicative) |
@@ -29,6 +34,17 @@ make install
 
 # Offline reproduction of metrics from bundled fixtures:
 make eval
+
+# Validate and reproduce the real NOAA AI-coder agreement:
+python3 scripts/check_corpus.py \
+  --corpus data/real/noaa_storm_events_2024_sample.csv \
+  --provenance docs/real-evidence/noaa_storm_events_2024_provenance.json \
+  --require-diversity
+python3 scripts/compare_coders.py \
+  --gold-a docs/real-evidence/noaa_coder_a.json \
+  --gold-b docs/real-evidence/noaa_coder_b.json \
+  --corpus data/real/noaa_storm_events_2024_sample.csv \
+  --output docs/real-evidence/noaa_coder_agreement.json
 ```
 
 This regenerates `docs/evaluation_metrics.json`. If the result differs from

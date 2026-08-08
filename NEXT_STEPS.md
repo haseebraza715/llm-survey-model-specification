@@ -20,12 +20,30 @@ the bootstrap CIs are basically noise. Recall CI on the bundled fixture is
 metric to detect a regression. Every other improvement on this list is
 invisible until the gold set grows.
 
-**Fix sketch.** Hand-label 100-200 relationships across 2-3 small real
-corpora: even single-annotator, no IRR. That's bad for a paper but fine for
-catching regressions during development. Inter-rater work (RESEARCH_PLAN §1.2)
-can come later when annotators are available.
+**What exists now.** The two-coder agreement spine is implemented and tested:
+`scripts/check_corpus.py` (real-corpus + provenance validator),
+`llm_survey.eval.gold_contract` (strict schema with exact variables and
+verbatim `evidence_span`), and `scripts/compare_coders.py` (deterministic Cohen
+kappa + Jaccard + disagreement table). See `docs/agreement-eval.md`.
 
-**Cost.** 1-2 days of focused labeling. No code changes.
+**What the real experiment found.** The repo now includes a pinned 40-row NOAA
+corpus and two blind DeepSeek coding passes. Both coder files pass the strict
+schema, but exact-name agreement is poor (24 shared edges; Jaccard `0.275862`;
+union-universe kappa `-0.565553`). Most disagreements are construct granularity,
+so exact free-form variable names are not a defensible final agreement unit.
+
+**What is still missing.** Define a controlled construct vocabulary and
+adjudication protocol, then run two blinded human coders. The OSMI corpus is
+also pinned and validated, but its sensitive disclosures were not sent to an
+external model.
+
+**Fix sketch.** Acquire a permissive-license public corpus, record provenance,
+have two coders independently produce strict-schema gold files, run
+`compare_coders.py`, then hand-label 100-200 relationships for the regression
+gold set as before.
+
+**Cost.** Corpus licensing + sourcing and the labeling remain the slow,
+external part; the harness itself is done.
 
 ---
 
