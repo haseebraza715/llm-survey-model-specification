@@ -1,0 +1,22 @@
+{
+  "corpus": "data/real/noaa_storm_events_2024_sample.csv",
+  "errors": [],
+  "provenance": {
+    "corpus_sha256": "7d567598d2b5ede65cbf1640d9379bdb274c6e3d405cbd822e4a6d4f01825be0",
+    "edits": "No text edits; speaker_id prefix and source metadata columns only.",
+    "license": "United States federal government work; public domain",
+    "retrieved_at": "2026-08-09",
+    "row_count": 40,
+    "sampling_procedure": "From EVENT_NARRATIVE values with at least 120 characters and an explicit causal cue, select the first 40 by SHA-256 of EVENT_ID plus verbatim narrative text.",
+    "source": {
+      "download_url": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2024_c20260728.csv.gz",
+      "name": "NOAA NCEI Storm Events Database \u2014 2024 event narratives",
+      "source_sha256": "2070b83eccab041b36360ab73645b9a249c3eefc5b92b5b3fc0cbba4d9fcc09c",
+      "url": "https://www.ncei.noaa.gov/stormevents/"
+    }
+  },
+  "row_count": 40,
+  "unique_speaker_ids": true,
+  "valid": true,
+  "warnings": []
+}
