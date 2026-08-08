@@ -1,0 +1,406 @@
+{
+  "corpus": "corpus.csv",
+  "coder": "DeepSeek V4 Flash blind coder A (2026-08-09)",
+  "protocol": "explicit-directed-link-v1",
+  "relationships": [
+    {
+      "id": "A001",
+      "from_variable": "ice jam",
+      "to_variable": "minor flooding near Ottawa",
+      "respondent_hint": "noaa_event_1151690",
+      "evidence_span": "An ice jam upstream from the Starved Rock Lock and Dam extending upstream to near Naplate caused minor flooding near Ottawa"
+    },
+    {
+      "id": "A002",
+      "from_variable": "prolonged light freezing rain",
+      "to_variable": "slick and hazardous travel conditions/roadways",
+      "respondent_hint": "noaa_event_1152424",
+      "evidence_span": "A prolonged period of light freezing rain, with total ice accretion between one-tenth and one-quarter of an inch, resulted in slick and hazardous travel conditions/roadways"
+    },
+    {
+      "id": "A003",
+      "from_variable": "vehicle accidents",
+      "to_variable": "minor injuries",
+      "respondent_hint": "noaa_event_1152424",
+      "evidence_span": "resulting in at least two minor injuries"
+    },
+    {
+      "id": "A004",
+      "from_variable": "unseasonably mild weather and lack of precipitation",
+      "to_variable": "lower than normal snow depth",
+      "respondent_hint": "noaa_event_1155237",
+      "evidence_span": "the snow depth was considerably lower than normal due to the unseasonably mild weather and lack of precipitation"
+    },
+    {
+      "id": "A005",
+      "from_variable": "heavy wet snow",
+      "to_variable": "isolated power outages",
+      "respondent_hint": "noaa_event_1155716",
+      "evidence_span": "Heavy wet snow accumulated on the night of March 9th that led to isolated power outages"
+    },
+    {
+      "id": "A006",
+      "from_variable": "cold temperatures and precipitation",
+      "to_variable": "ice glaze",
+      "respondent_hint": "noaa_event_1157242",
+      "evidence_span": "The combination of cold temperatures and precipitation produced widespread reports of a glaze to 0.15 of an inch of ice"
+    },
+    {
+      "id": "A007",
+      "from_variable": "strong and gusty winds",
+      "to_variable": "near-blizzard conditions",
+      "respondent_hint": "noaa_event_1158465",
+      "evidence_span": "Strong and gusty winds brought periods of near-blizzard conditions across the county throughout this event"
+    },
+    {
+      "id": "A008",
+      "from_variable": "persistent strong wind",
+      "to_variable": "continued blowing and drifting snow",
+      "respondent_hint": "noaa_event_1158465",
+      "evidence_span": "Significant blowing and drifting snow continued well after the snow stopped falling due to persistent strong wind on the back side of the storm system"
+    },
+    {
+      "id": "A009",
+      "from_variable": "thunderstorms",
+      "to_variable": "heavy rain",
+      "respondent_hint": "noaa_event_1159398",
+      "evidence_span": "Thunderstorms produced heavy rain"
+    },
+    {
+      "id": "A010",
+      "from_variable": "heavy rain",
+      "to_variable": "flash flooding",
+      "respondent_hint": "noaa_event_1159398",
+      "evidence_span": "heavy rain that led to flash flooding closing several low water crossings in the Schulenburg area"
+    },
+    {
+      "id": "A011",
+      "from_variable": "freezing rain",
+      "to_variable": "ice accumulations",
+      "respondent_hint": "noaa_event_1160012",
+      "evidence_span": "A period of freezing rain resulted in ice accumulations"
+    },
+    {
+      "id": "A012",
+      "from_variable": "warming temperatures",
+      "to_variable": "ice melting",
+      "respondent_hint": "noaa_event_1160012",
+      "evidence_span": "as temperatures warmed and ice melted"
+    },
+    {
+      "id": "A013",
+      "from_variable": "strong winds",
+      "to_variable": "tree damage and power outages",
+      "respondent_hint": "noaa_event_1162511",
+      "evidence_span": "These strong winds caused some tree damage and power-outages"
+    },
+    {
+      "id": "A014",
+      "from_variable": "significant precipitation",
+      "to_variable": "removal of D2 Severe Drought",
+      "respondent_hint": "noaa_event_1164265",
+      "evidence_span": "A large system during the middle of the month brought significant precipitation to the county which led to the removal of D2 Severe Drought across the entirety of the county"
+    },
+    {
+      "id": "A015",
+      "from_variable": "blowing and drifting",
+      "to_variable": "variable snow coverage",
+      "respondent_hint": "noaa_event_1165206",
+      "evidence_span": "with variable coverage due to blowing and drifting"
+    },
+    {
+      "id": "A016",
+      "from_variable": "frequent wind gusts of 30 to 35 mph",
+      "to_variable": "extensive blowing and drifting snow",
+      "respondent_hint": "noaa_event_1166197",
+      "evidence_span": "Frequent wind gusts of 30 to 35 mph produced extensive blowing and drifting snow"
+    },
+    {
+      "id": "A017",
+      "from_variable": "strong wind gust",
+      "to_variable": "tile ceiling damage and partial collapse",
+      "respondent_hint": "noaa_event_1169067",
+      "evidence_span": "The strong wind gust also caused damage to the tile ceiling which partially collapsed in the interior of the building"
+    },
+    {
+      "id": "A018",
+      "from_variable": "multiple bands of snow",
+      "to_variable": "6 to 8 inches of heavy wet snow",
+      "respondent_hint": "noaa_event_1169777",
+      "evidence_span": "Multiple bands of snow moved through and produced generally 6 to 8 inches of heavy wet snow"
+    },
+    {
+      "id": "A019",
+      "from_variable": "multiple bands of snow",
+      "to_variable": "35 mph wind gusts",
+      "respondent_hint": "noaa_event_1169777",
+      "evidence_span": "produced generally 6 to 8 inches of heavy wet snow and 35 mph wind gusts across much of the county"
+    },
+    {
+      "id": "A020",
+      "from_variable": "easterly gales",
+      "to_variable": "storm surge of two feet",
+      "respondent_hint": "noaa_event_1169890",
+      "evidence_span": "The easterly gales produced a storm surge of two feet in Portland Harbor"
+    },
+    {
+      "id": "A021",
+      "from_variable": "runoff from heavy rainfall",
+      "to_variable": "fresh water flooding in estuaries",
+      "respondent_hint": "noaa_event_1169890",
+      "evidence_span": "fresh water flooding in estuaries due to runoff from heavy rainfall"
+    },
+    {
+      "id": "A022",
+      "from_variable": "heavy snow and gusting winds",
+      "to_variable": "hazardous driving conditions",
+      "respondent_hint": "noaa_event_1170690",
+      "evidence_span": "Snow of this magnitude, coupled with winds gusting 50-85 mph at pass elevation, resulted in hazardous driving conditions"
+    },
+    {
+      "id": "A023",
+      "from_variable": "downburst winds",
+      "to_variable": "snapped power poles and blown-off metal roof",
+      "respondent_hint": "noaa_event_1172269",
+      "evidence_span": "Due to downburst winds, a couple of power poles snapped and a metal roof was blown off of a large building along US 45 south of County Road 620 N"
+    },
+    {
+      "id": "A024",
+      "from_variable": "thunderstorm winds",
+      "to_variable": "downed power pole and tree on house",
+      "respondent_hint": "noaa_event_1173213",
+      "evidence_span": "Thunderstorm winds caused a power pole to fall across a roadway and a tree to fall on a house south of Red Bud"
+    },
+    {
+      "id": "A025",
+      "from_variable": "tornado",
+      "to_variable": "tree damage",
+      "respondent_hint": "noaa_event_1173846",
+      "evidence_span": "This tornado moved into Lincoln County from Pottawatomie County and produced tree damage southeast of Prague"
+    },
+    {
+      "id": "A026",
+      "from_variable": "several consecutive days of rain",
+      "to_variable": "flooding and road closures",
+      "respondent_hint": "noaa_event_1175349",
+      "evidence_span": "Several consecutive days of rain led to flooding and road closures in parts of Clearfield County on April 3, 2024"
+    },
+    {
+      "id": "A027",
+      "from_variable": "microburst winds",
+      "to_variable": "downed and snapped trees",
+      "respondent_hint": "noaa_event_1179716",
+      "evidence_span": "a microburst with winds estimated at 100 mph downed and snapped many trees in a wooded area near Seekonk High School"
+    },
+    {
+      "id": "A028",
+      "from_variable": "downed and snapped trees",
+      "to_variable": "damage to the roof",
+      "respondent_hint": "noaa_event_1179716",
+      "evidence_span": "which caused damage to the roof"
+    },
+    {
+      "id": "A029",
+      "from_variable": "hail",
+      "to_variable": "damage to camper skylight",
+      "respondent_hint": "noaa_event_1180173",
+      "evidence_span": "hail caused damage to the skylight on a camper"
+    },
+    {
+      "id": "A030",
+      "from_variable": "hail",
+      "to_variable": "downed leaves and branches",
+      "respondent_hint": "noaa_event_1180173",
+      "evidence_span": "downed numerous leaves and branches"
+    },
+    {
+      "id": "A031",
+      "from_variable": "thunderstorm",
+      "to_variable": "wind gusts estimated at 70 mph",
+      "respondent_hint": "noaa_event_1181424",
+      "evidence_span": "A thunderstorm produced wind gusts estimated at 70 mph"
+    },
+    {
+      "id": "A032",
+      "from_variable": "70 mph wind gusts",
+      "to_variable": "downed Chinese Elm tree onto building roof",
+      "respondent_hint": "noaa_event_1181424",
+      "evidence_span": "that knocked down a Chinese Elm tree onto the roof of a building northwest of San Marcos"
+    },
+    {
+      "id": "A033",
+      "from_variable": "tornado",
+      "to_variable": "minor tree damage",
+      "respondent_hint": "noaa_event_1181702",
+      "evidence_span": "where it continued to produce minor tree damage"
+    },
+    {
+      "id": "A034",
+      "from_variable": "tornado",
+      "to_variable": "minor damage to farm outbuilding roof panels",
+      "respondent_hint": "noaa_event_1181702",
+      "evidence_span": "caused minor damage to the roof panels of a farm outbuilding on County Road 165 and Highway F"
+    },
+    {
+      "id": "A035",
+      "from_variable": "thunderstorm winds",
+      "to_variable": "downed trees",
+      "respondent_hint": "noaa_event_1182476",
+      "evidence_span": "An estimated one hundred trees were blown down by thunderstorm winds in the Max Meadows area"
+    },
+    {
+      "id": "A036",
+      "from_variable": "downed trees",
+      "to_variable": "severe damage to trailer and vehicle",
+      "respondent_hint": "noaa_event_1182476",
+      "evidence_span": "One of the downed trees caused severe damage to a single-wide trailer and a vehicle"
+    },
+    {
+      "id": "A037",
+      "from_variable": "lightning",
+      "to_variable": "Mestenas Canyon Wildfire",
+      "respondent_hint": "noaa_event_1183802",
+      "evidence_span": "The lightning caused Mestenas Canyon Wildfire was located roughly 12 miles southwest of Dulce"
+    },
+    {
+      "id": "A038",
+      "from_variable": "suspected microburst",
+      "to_variable": "damage along West Legends Way",
+      "respondent_hint": "noaa_event_1187971",
+      "evidence_span": "A suspected microburst caused damage along West Legends Way on Fort Cavazos"
+    },
+    {
+      "id": "A039",
+      "from_variable": "line of thunderstorms",
+      "to_variable": "damaging wind gusts",
+      "respondent_hint": "noaa_event_1191609",
+      "evidence_span": "A line of thunderstorms moving offshore produced damaging wind gusts"
+    },
+    {
+      "id": "A040",
+      "from_variable": "dry surface levels",
+      "to_variable": "enhanced outflow winds",
+      "respondent_hint": "noaa_event_1197725",
+      "evidence_span": "Dry surface levels acted to enhance outflow winds as storms moved overhead"
+    },
+    {
+      "id": "A041",
+      "from_variable": "storms moving over Cortez",
+      "to_variable": "wind gusts to 58 mph",
+      "respondent_hint": "noaa_event_1197725",
+      "evidence_span": "they produced gusts to 58 mph at the KCEZ ASOS at Cortez-Montezuma Airport in Cortez"
+    },
+    {
+      "id": "A042",
+      "from_variable": "heavy rainfall",
+      "to_variable": "street flooding in George",
+      "respondent_hint": "noaa_event_1197879",
+      "evidence_span": "resulted in numerous streets under water in George"
+    },
+    {
+      "id": "A043",
+      "from_variable": "heavy rainfall",
+      "to_variable": "flooding of small creeks",
+      "respondent_hint": "noaa_event_1197879",
+      "evidence_span": "flooding of areas small creeks"
+    },
+    {
+      "id": "A044",
+      "from_variable": "heavy rain",
+      "to_variable": "minor river flooding on the White River",
+      "respondent_hint": "noaa_event_1202413",
+      "evidence_span": "Heavy rain led to minor river flooding on the White River at Batesville"
+    },
+    {
+      "id": "A045",
+      "from_variable": "heavy rains",
+      "to_variable": "rapid rises on streams",
+      "respondent_hint": "noaa_event_1209260",
+      "evidence_span": "Heavy rains in Anchorage caused rapid rises on streams in the city"
+    },
+    {
+      "id": "A046",
+      "from_variable": "high waters on Chester Creek",
+      "to_variable": "flooding of trails and encroachment on homes",
+      "respondent_hint": "noaa_event_1209260",
+      "evidence_span": "The high waters on Chester Creek severely flooded trails along the creek and encroached on homes near Chester Creek just immediately east of Arctic Blvd"
+    },
+    {
+      "id": "A047",
+      "from_variable": "slow-moving storm",
+      "to_variable": "over four inches of rain",
+      "respondent_hint": "noaa_event_1213582",
+      "evidence_span": "A slow-moving storm near Gladys and produced over four inches of rain in less than 90 minutes"
+    },
+    {
+      "id": "A048",
+      "from_variable": "lightning",
+      "to_variable": "downed power line and fire",
+      "respondent_hint": "noaa_event_1218190",
+      "evidence_span": "lightning struck a transformer in the 6800 block of Tyler Street in Hollywood, which knocked down a power line onto a home and started a fire"
+    },
+    {
+      "id": "A049",
+      "from_variable": "fire",
+      "to_variable": "significant damage to home and property",
+      "respondent_hint": "noaa_event_1218190",
+      "evidence_span": "The fire caused significant damage to the home and property"
+    },
+    {
+      "id": "A050",
+      "from_variable": "runoff from a passing thunderstorm",
+      "to_variable": "standing water",
+      "respondent_hint": "noaa_event_1219083",
+      "evidence_span": "Several inches of standing water due to runoff from a passing thunderstorm was observed along the 1000 block of Green Level Road"
+    },
+    {
+      "id": "A051",
+      "from_variable": "low visibility",
+      "to_variable": "school delays and bus service cancellations",
+      "respondent_hint": "noaa_event_1220340",
+      "evidence_span": "Several school districts either opened late or delayed or cancelled bus service due to low visibility"
+    },
+    {
+      "id": "A052",
+      "from_variable": "widespread rainfall totals",
+      "to_variable": "urban, street, and low-lying flooding",
+      "respondent_hint": "noaa_event_1221493",
+      "evidence_span": "significant urban, street, and low-lying flooding as a result of widespread rainfall totals of 4 to 9 inches"
+    },
+    {
+      "id": "A053",
+      "from_variable": "very heavy rainfall rates",
+      "to_variable": "flash flooding",
+      "respondent_hint": "noaa_event_1221493",
+      "evidence_span": "A period of very heavy rainfall rates associated with the core of the storm led to flash flooding during the overnight period"
+    },
+    {
+      "id": "A054",
+      "from_variable": "above normal precipitation",
+      "to_variable": "end of Severe Drought (D2)",
+      "respondent_hint": "noaa_event_1223122",
+      "evidence_span": "Above normal precipitation from October 29th through November 7th brought an end to the Severe Drought (D2) across the county"
+    },
+    {
+      "id": "A055",
+      "from_variable": "additional precipitation",
+      "to_variable": "designation in Moderate Drought (D1) or Abnormally Dry (D0) conditions",
+      "respondent_hint": "noaa_event_1223122",
+      "evidence_span": "Additional precipitation during the latter half of the month resulted in Menominee County being designated in Moderate Drought (D1) or Abnormally Dry (D0) conditions at the end of the month"
+    },
+    {
+      "id": "A056",
+      "from_variable": "precipitation",
+      "to_variable": "snowfall",
+      "respondent_hint": "noaa_event_1224600",
+      "evidence_span": "1.1 inches of precipitation led to an estimate 13 inches of snowfall"
+    },
+    {
+      "id": "A057",
+      "from_variable": "heavy rainfall",
+      "to_variable": "flooding of Morton Street",
+      "respondent_hint": "noaa_event_1229926",
+      "evidence_span": "Heavy rainfall of around 5 inches in less than 2 hours produced flooding of Morton Street on the bayside of Grassy Key"
+    }
+  ]
+}

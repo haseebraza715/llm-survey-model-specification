@@ -1,0 +1,607 @@
+{
+  "coder_a": "DeepSeek V4 Flash blind coder A (2026-08-09)",
+  "coder_b": "DeepSeek V4 Flash blind coder B (2026-08-09)",
+  "cohen_kappa": -0.565553,
+  "contingency": {
+    "both": 24,
+    "neither": 0,
+    "only_a": 33,
+    "only_b": 30
+  },
+  "corpus_path": "data/real/noaa_storm_events_2024_sample.csv",
+  "disagreement_count": 63,
+  "disagreements": [
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "ice jam",
+      "normalized_from": "ice jam",
+      "normalized_to": "minor flood",
+      "respondent_hint": "noaa_event_1151690",
+      "to_variable": "minor flooding"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "ice jam",
+      "normalized_from": "ice jam",
+      "normalized_to": "minor flood near ottawa",
+      "respondent_hint": "noaa_event_1151690",
+      "to_variable": "minor flooding near Ottawa"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "light freezing rain",
+      "normalized_from": "light freez rain",
+      "normalized_to": "slick and hazardou travel condition",
+      "respondent_hint": "noaa_event_1152424",
+      "to_variable": "slick and hazardous travel conditions"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "prolonged light freezing rain",
+      "normalized_from": "prolong light freez rain",
+      "normalized_to": "slick and hazardou travel condition roadway",
+      "respondent_hint": "noaa_event_1152424",
+      "to_variable": "slick and hazardous travel conditions/roadways"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "cold temperatures and precipitation",
+      "normalized_from": "cold temperature and precipitation",
+      "normalized_to": "ice glaze",
+      "respondent_hint": "noaa_event_1157242",
+      "to_variable": "ice glaze"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "cold temperatures and precipitation",
+      "normalized_from": "cold temperature and precipitation",
+      "normalized_to": "ice glaze accumulation",
+      "respondent_hint": "noaa_event_1157242",
+      "to_variable": "ice glaze accumulations"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "persistent strong wind",
+      "normalized_from": "persistent strong wind",
+      "normalized_to": "blow and drift snow",
+      "respondent_hint": "noaa_event_1158465",
+      "to_variable": "blowing and drifting snow"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "persistent strong wind",
+      "normalized_from": "persistent strong wind",
+      "normalized_to": "continu blow and drift snow",
+      "respondent_hint": "noaa_event_1158465",
+      "to_variable": "continued blowing and drifting snow"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "warming temperatures",
+      "normalized_from": "warm temperature",
+      "normalized_to": "ice melt",
+      "respondent_hint": "noaa_event_1160012",
+      "to_variable": "ice melting"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "frequent wind gusts",
+      "normalized_from": "frequent wind gust",
+      "normalized_to": "blow and drift snow",
+      "respondent_hint": "noaa_event_1166197",
+      "to_variable": "blowing and drifting snow"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "frequent wind gusts of 30 to 35 mph",
+      "normalized_from": "frequent wind gust of 30 to 35 mph",
+      "normalized_to": "extensive blow and drift snow",
+      "respondent_hint": "noaa_event_1166197",
+      "to_variable": "extensive blowing and drifting snow"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "strong wind gust",
+      "normalized_from": "strong wind gust",
+      "normalized_to": "damage to tile ceil",
+      "respondent_hint": "noaa_event_1169067",
+      "to_variable": "damage to tile ceiling"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "strong wind gust",
+      "normalized_from": "strong wind gust",
+      "normalized_to": "tile ceil damage and partial collapse",
+      "respondent_hint": "noaa_event_1169067",
+      "to_variable": "tile ceiling damage and partial collapse"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "multiple bands of snow",
+      "normalized_from": "multiple band of snow",
+      "normalized_to": "35 mph wind gust",
+      "respondent_hint": "noaa_event_1169777",
+      "to_variable": "35 mph wind gusts"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "multiple bands of snow",
+      "normalized_from": "multiple band of snow",
+      "normalized_to": "6 to 8 inche of heavy wet snow",
+      "respondent_hint": "noaa_event_1169777",
+      "to_variable": "6 to 8 inches of heavy wet snow"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "multiple bands of snow",
+      "normalized_from": "multiple band of snow",
+      "normalized_to": "snow accumulation and wind gust",
+      "respondent_hint": "noaa_event_1169777",
+      "to_variable": "snow accumulation and wind gusts"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "easterly gales",
+      "normalized_from": "easter gale",
+      "normalized_to": "storm surge",
+      "respondent_hint": "noaa_event_1169890",
+      "to_variable": "storm surge"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "easterly gales",
+      "normalized_from": "easter gale",
+      "normalized_to": "storm surge of two feet",
+      "respondent_hint": "noaa_event_1169890",
+      "to_variable": "storm surge of two feet"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "heavy snow and gusting winds",
+      "normalized_from": "heavy snow and gust wind",
+      "normalized_to": "hazardou driv condition",
+      "respondent_hint": "noaa_event_1170690",
+      "to_variable": "hazardous driving conditions"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "snow of this magnitude and gusting winds",
+      "normalized_from": "snow of thi magnitude and gust wind",
+      "normalized_to": "hazardou driv condition",
+      "respondent_hint": "noaa_event_1170690",
+      "to_variable": "hazardous driving conditions"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "downburst winds",
+      "normalized_from": "downburst wind",
+      "normalized_to": "pow pole snapp and metal roof blown off",
+      "respondent_hint": "noaa_event_1172269",
+      "to_variable": "power poles snapped and metal roof blown off"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "downburst winds",
+      "normalized_from": "downburst wind",
+      "normalized_to": "snapp pow pole and blown-off metal roof",
+      "respondent_hint": "noaa_event_1172269",
+      "to_variable": "snapped power poles and blown-off metal roof"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "thunderstorm winds",
+      "normalized_from": "thunderstorm wind",
+      "normalized_to": "down pow pole and tree",
+      "respondent_hint": "noaa_event_1173213",
+      "to_variable": "downed power pole and tree"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "thunderstorm winds",
+      "normalized_from": "thunderstorm wind",
+      "normalized_to": "down pow pole and tree on house",
+      "respondent_hint": "noaa_event_1173213",
+      "to_variable": "downed power pole and tree on house"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "downed and snapped trees",
+      "normalized_from": "down and snapp tree",
+      "normalized_to": "damage to the roof",
+      "respondent_hint": "noaa_event_1179716",
+      "to_variable": "damage to the roof"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "downed trees",
+      "normalized_from": "down tree",
+      "normalized_to": "roof damage",
+      "respondent_hint": "noaa_event_1179716",
+      "to_variable": "roof damage"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "microburst winds",
+      "normalized_from": "microburst wind",
+      "normalized_to": "down and snapp tree",
+      "respondent_hint": "noaa_event_1179716",
+      "to_variable": "downed and snapped trees"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "microburst winds",
+      "normalized_from": "microburst wind",
+      "normalized_to": "down tree",
+      "respondent_hint": "noaa_event_1179716",
+      "to_variable": "downed trees"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "hail",
+      "normalized_from": "hail",
+      "normalized_to": "damage to camp skylight",
+      "respondent_hint": "noaa_event_1180173",
+      "to_variable": "damage to camper skylight"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "hail",
+      "normalized_from": "hail",
+      "normalized_to": "damage to skylight and vegetation",
+      "respondent_hint": "noaa_event_1180173",
+      "to_variable": "damage to skylight and vegetation"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "hail",
+      "normalized_from": "hail",
+      "normalized_to": "down leave and branche",
+      "respondent_hint": "noaa_event_1180173",
+      "to_variable": "downed leaves and branches"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "70 mph wind gusts",
+      "normalized_from": "70 mph wind gust",
+      "normalized_to": "down chinese elm tree onto build roof",
+      "respondent_hint": "noaa_event_1181424",
+      "to_variable": "downed Chinese Elm tree onto building roof"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "thunderstorm",
+      "normalized_from": "thunderstorm",
+      "normalized_to": "wind gust",
+      "respondent_hint": "noaa_event_1181424",
+      "to_variable": "wind gusts"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "thunderstorm",
+      "normalized_from": "thunderstorm",
+      "normalized_to": "wind gust estimat at 70 mph",
+      "respondent_hint": "noaa_event_1181424",
+      "to_variable": "wind gusts estimated at 70 mph"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "wind gusts",
+      "normalized_from": "wind gust",
+      "normalized_to": "tree knock down",
+      "respondent_hint": "noaa_event_1181424",
+      "to_variable": "tree knocked down"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "tornado",
+      "normalized_from": "tornado",
+      "normalized_to": "minor damage to farm outbuild roof panel",
+      "respondent_hint": "noaa_event_1181702",
+      "to_variable": "minor damage to farm outbuilding roof panels"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "tornado",
+      "normalized_from": "tornado",
+      "normalized_to": "minor tree damage",
+      "respondent_hint": "noaa_event_1181702",
+      "to_variable": "minor tree damage"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "tornado",
+      "normalized_from": "tornado",
+      "normalized_to": "roof panel damage to farm outbuild",
+      "respondent_hint": "noaa_event_1181702",
+      "to_variable": "roof panel damage to farm outbuilding"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "tornado",
+      "normalized_from": "tornado",
+      "normalized_to": "tree damage",
+      "respondent_hint": "noaa_event_1181702",
+      "to_variable": "tree damage"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "downed trees",
+      "normalized_from": "down tree",
+      "normalized_to": "damage to trail and vehicle",
+      "respondent_hint": "noaa_event_1182476",
+      "to_variable": "damage to trailer and vehicle"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "downed trees",
+      "normalized_from": "down tree",
+      "normalized_to": "severe damage to trail and vehicle",
+      "respondent_hint": "noaa_event_1182476",
+      "to_variable": "severe damage to trailer and vehicle"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "wind gusts",
+      "normalized_from": "wind gust",
+      "normalized_to": "down tree and pow line",
+      "respondent_hint": "noaa_event_1191609",
+      "to_variable": "downed trees and power lines"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "storms",
+      "normalized_from": "storm",
+      "normalized_to": "wind gust",
+      "respondent_hint": "noaa_event_1197725",
+      "to_variable": "wind gusts"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "storms moving over Cortez",
+      "normalized_from": "storm mov over cortez",
+      "normalized_to": "wind gust to 58 mph",
+      "respondent_hint": "noaa_event_1197725",
+      "to_variable": "wind gusts to 58 mph"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "heavy rainfall",
+      "normalized_from": "heavy rainfall",
+      "normalized_to": "flood of small creek",
+      "respondent_hint": "noaa_event_1197879",
+      "to_variable": "flooding of small creeks"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "heavy rainfall",
+      "normalized_from": "heavy rainfall",
+      "normalized_to": "street flood in george",
+      "respondent_hint": "noaa_event_1197879",
+      "to_variable": "street flooding in George"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "rainfall",
+      "normalized_from": "rainfall",
+      "normalized_to": "street and creek flood",
+      "respondent_hint": "noaa_event_1197879",
+      "to_variable": "street and creek flooding"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "heavy rain",
+      "normalized_from": "heavy rain",
+      "normalized_to": "minor riv flood",
+      "respondent_hint": "noaa_event_1202413",
+      "to_variable": "minor river flooding"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "heavy rain",
+      "normalized_from": "heavy rain",
+      "normalized_to": "minor riv flood on the white riv",
+      "respondent_hint": "noaa_event_1202413",
+      "to_variable": "minor river flooding on the White River"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "slow-moving storm",
+      "normalized_from": "slow-mov storm",
+      "normalized_to": "heavy rain",
+      "respondent_hint": "noaa_event_1213582",
+      "to_variable": "heavy rain"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "slow-moving storm",
+      "normalized_from": "slow-mov storm",
+      "normalized_to": "over four inche of rain",
+      "respondent_hint": "noaa_event_1213582",
+      "to_variable": "over four inches of rain"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "fire",
+      "normalized_from": "fire",
+      "normalized_to": "significant damage to home and property",
+      "respondent_hint": "noaa_event_1218190",
+      "to_variable": "significant damage to home and property"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "lightning",
+      "normalized_from": "lightn",
+      "normalized_to": "down pow line and fire",
+      "respondent_hint": "noaa_event_1218190",
+      "to_variable": "downed power line and fire"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "lightning",
+      "normalized_from": "lightn",
+      "normalized_to": "transform strike",
+      "respondent_hint": "noaa_event_1218190",
+      "to_variable": "transformer strike"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "lightning strike",
+      "normalized_from": "lightn strike",
+      "normalized_to": "down pow line and fire",
+      "respondent_hint": "noaa_event_1218190",
+      "to_variable": "downed power line and fire"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "low visibility",
+      "normalized_from": "low visibility",
+      "normalized_to": "school and bus service disruption",
+      "respondent_hint": "noaa_event_1220340",
+      "to_variable": "school and bus service disruptions"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "low visibility",
+      "normalized_from": "low visibility",
+      "normalized_to": "school delay and bus service cancellation",
+      "respondent_hint": "noaa_event_1220340",
+      "to_variable": "school delays and bus service cancellations"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "widespread rainfall totals",
+      "normalized_from": "widespread rainfall total",
+      "normalized_to": "urban and low-ly flood",
+      "respondent_hint": "noaa_event_1221493",
+      "to_variable": "urban and low-lying flooding"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "widespread rainfall totals",
+      "normalized_from": "widespread rainfall total",
+      "normalized_to": "urban street and low-ly flood",
+      "respondent_hint": "noaa_event_1221493",
+      "to_variable": "urban, street, and low-lying flooding"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "above normal precipitation",
+      "normalized_from": "above normal precipitation",
+      "normalized_to": "end of severe drought",
+      "respondent_hint": "noaa_event_1223122",
+      "to_variable": "end of Severe Drought"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "above normal precipitation",
+      "normalized_from": "above normal precipitation",
+      "normalized_to": "end of severe drought d2",
+      "respondent_hint": "noaa_event_1223122",
+      "to_variable": "end of Severe Drought (D2)"
+    },
+    {
+      "coder_a": true,
+      "coder_b": false,
+      "from_variable": "additional precipitation",
+      "normalized_from": "additional precipitation",
+      "normalized_to": "designation in moderate drought d1 or abnormal dry d0 condition",
+      "respondent_hint": "noaa_event_1223122",
+      "to_variable": "designation in Moderate Drought (D1) or Abnormally Dry (D0) conditions"
+    },
+    {
+      "coder_a": false,
+      "coder_b": true,
+      "from_variable": "additional precipitation",
+      "normalized_from": "additional precipitation",
+      "normalized_to": "drought improvement designation",
+      "respondent_hint": "noaa_event_1223122",
+      "to_variable": "drought improvement designation"
+    }
+  ],
+  "edge_count_a": 57,
+  "edge_count_b": 54,
+  "edge_key": "(respondent_hint, normalized from_variable, normalized to_variable)",
+  "edge_set_jaccard": 0.275862,
+  "expected_agreement": 0.537455,
+  "gold_a_path": "docs/real-evidence/noaa_coder_a.json",
+  "gold_b_path": "docs/real-evidence/noaa_coder_b.json",
+  "gold_issues_a": {
+    "by_severity": {
+      "error": 0,
+      "warning": 0
+    },
+    "count": 0
+  },
+  "gold_issues_b": {
+    "by_severity": {
+      "error": 0,
+      "warning": 0
+    },
+    "count": 0
+  },
+  "observed_agreement": 0.275862,
+  "strict_schema_violations": [],
+  "universe_convention": "union of edges proposed by either coder (agreement on absence is not credited)",
+  "valid": true
+}
