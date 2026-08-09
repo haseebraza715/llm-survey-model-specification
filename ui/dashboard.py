@@ -33,6 +33,18 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def _safe_upload_target(raw_filename: str, upload_dir: str = "data/raw") -> str:
+    """Return a safe target path for an uploaded file.
+
+    The client-supplied filename is reduced to its basename so `../`, absolute
+    paths, or nested separators (forward or backslash) in `raw_filename` can
+    never escape `upload_dir`.
+    """
+    normalized = str(raw_filename or "upload").replace("\\", "/")
+    safe_name = Path(normalized).name
+    return os.path.join(upload_dir, safe_name)
+
+
 def _coverage_value(report: dict[str, Any] | None) -> float:
     if not report:
         return 0.0
@@ -201,7 +213,9 @@ def main() -> None:
         if upload_option == "Upload CSV / TXT / DOCX":
             uploaded = st.file_uploader("Upload", type=["csv", "txt", "pdf", "docx"])
             if uploaded is not None:
-                file_path = f"data/raw/{uploaded.name}"
+                # The client-supplied filename must never influence the target
+                # path ("../" or absolute paths in uploaded.name are ignored).
+                file_path = _safe_upload_target(uploaded.name)
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 Path(file_path).write_bytes(uploaded.getbuffer())
                 st.success(f"Saved {uploaded.name}")
