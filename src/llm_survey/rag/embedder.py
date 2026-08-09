@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Sequence
+from typing import Any
 
 try:
     import diskcache
@@ -36,6 +37,47 @@ class _FallbackEmbeddingModel:
         return encoded
 
 
+class _MemoCache:
+    """dict-backed cache with an optional diskcache backend that degrades to memory-only."""
+
+    def __init__(self, cache_dir: str) -> None:
+        self._memory: dict[str, Any] = {}
+        self._disk: Any = None
+        if diskcache is not None:
+            try:
+                self._disk = diskcache.Cache(cache_dir)
+            except Exception:  # pragma: no cover - unwritable cache dir must not break embedding
+                self._disk = None
+
+    def __contains__(self, key: str) -> bool:
+        if key in self._memory:
+            return True
+        if self._disk is not None:
+            try:
+                return key in self._disk
+            except Exception:  # pragma: no cover - disk backend degraded
+                return False
+        return False
+
+    def __getitem__(self, key: str) -> Any:
+        if key in self._memory:
+            return self._memory[key]
+        if self._disk is not None:
+            try:
+                return self._disk[key]
+            except Exception:  # pragma: no cover - disk backend degraded
+                raise KeyError(key) from None
+        raise KeyError(key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._memory[key] = value
+        if self._disk is not None:
+            try:
+                self._disk[key] = value
+            except Exception:  # pragma: no cover - disk backend degraded
+                pass
+
+
 class CachedEmbedder:
     """Sentence embedder with disk-backed cache."""
 
@@ -46,7 +88,7 @@ class CachedEmbedder:
         model: object | None = None,
     ):
         self.model_name = model_name
-        self.cache = diskcache.Cache(cache_dir) if diskcache else {}
+        self.cache = _MemoCache(cache_dir)
 
         if model is not None:
             self.model = model
@@ -91,6 +133,12 @@ class CachedEmbedder:
 
         if pending_texts:
             encoded = self.model.encode(pending_texts, normalize_embeddings=True)
+            if len(pending_texts) == 1 and not hasattr(encoded, "__len__"):
+                raise TypeError("embedding model must return a sequence of vectors")
+            if len(encoded) != len(pending_texts):
+                raise ValueError(
+                    f"embedding model returned {len(encoded)} vectors for {len(pending_texts)} texts"
+                )
             for item_idx, emb in zip(pending_indices, encoded, strict=True):
                 vector = emb.tolist() if hasattr(emb, "tolist") else list(emb)
                 vectors[item_idx] = vector

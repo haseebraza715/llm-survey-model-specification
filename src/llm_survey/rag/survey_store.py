@@ -4,6 +4,7 @@ from typing import Any
 
 import chromadb
 
+from llm_survey.rag.chroma_utils import to_chroma_metadata
 from llm_survey.rag.embedder import CachedEmbedder
 
 
@@ -20,18 +21,6 @@ class SurveyStore:
         self.collection = self.client.get_or_create_collection(collection_name)
         self.embedder = embedder or CachedEmbedder()
 
-    @staticmethod
-    def _to_chroma_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
-        output: dict[str, Any] = {}
-        for key, value in metadata.items():
-            if value is None:
-                continue
-            if isinstance(value, (str, int, float, bool)):
-                output[key] = value
-            else:
-                output[key] = str(value)
-        return output
-
     def add_chunks(self, chunks: list[dict[str, Any]]) -> dict[str, int]:
         """Add chunks to store, skipping already-seen content hashes."""
         new_ids: list[str] = []
@@ -41,7 +30,11 @@ class SurveyStore:
 
         skipped = 0
         for chunk in chunks:
-            text = chunk["text"]
+            text = str(chunk.get("text") or "").strip()
+            if not text:
+                skipped += 1
+                continue
+
             content_hash = self.embedder.content_hash(text)
             doc_id = f"survey_{content_hash}"
 
@@ -57,7 +50,7 @@ class SurveyStore:
 
             new_ids.append(doc_id)
             new_docs.append(text)
-            new_metadatas.append(self._to_chroma_metadata(metadata))
+            new_metadatas.append(to_chroma_metadata(metadata))
             queued_ids.add(doc_id)
 
         if new_docs:

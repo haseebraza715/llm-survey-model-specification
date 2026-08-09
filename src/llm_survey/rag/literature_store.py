@@ -4,6 +4,7 @@ from typing import Any
 
 import chromadb
 
+from llm_survey.rag.chroma_utils import to_chroma_metadata
 from llm_survey.rag.embedder import CachedEmbedder
 
 
@@ -20,22 +21,11 @@ class LiteratureStore:
         self.collection = self.client.get_or_create_collection(collection_name)
         self.embedder = embedder or CachedEmbedder()
 
-    @staticmethod
-    def _to_chroma_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
-        output: dict[str, Any] = {}
-        for key, value in metadata.items():
-            if value is None:
-                continue
-            if isinstance(value, (str, int, float, bool)):
-                output[key] = value
-            else:
-                output[key] = str(value)
-        return output
-
     def add_papers(self, papers: list[dict[str, Any]]) -> dict[str, int]:
         ids: list[str] = []
         docs: list[str] = []
         metas: list[dict[str, Any]] = []
+        queued_ids: set[str] = set()
         skipped = 0
 
         for paper in papers:
@@ -50,7 +40,7 @@ class LiteratureStore:
             doc_id = f"{source}_{paper_id}"
 
             existing = self.collection.get(ids=[doc_id], include=[])
-            if existing.get("ids"):
+            if existing.get("ids") or doc_id in queued_ids:
                 skipped += 1
                 continue
 
@@ -64,7 +54,8 @@ class LiteratureStore:
             }
             ids.append(doc_id)
             docs.append(f"{title}\n\n{abstract}".strip())
-            metas.append(self._to_chroma_metadata(metadata))
+            metas.append(to_chroma_metadata(metadata))
+            queued_ids.add(doc_id)
 
         if docs:
             embeddings = self.embedder.embed_many(docs)
