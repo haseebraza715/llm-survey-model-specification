@@ -25,9 +25,11 @@ except ImportError:  # pragma: no cover - structlog is in pyproject; runtime gua
 _CONFIGURED = False
 
 
-def configure_logging(level: str | int = "INFO", *, force_json: bool | None = None) -> None:
+def configure_logging(
+    level: str | int = "INFO", *, force_json: bool | None = None, reset: bool = False
+) -> None:
     global _CONFIGURED
-    if _CONFIGURED:
+    if _CONFIGURED and not reset:
         return
     log_level = level if isinstance(level, int) else getattr(logging, str(level).upper(), logging.INFO)
     logging.basicConfig(

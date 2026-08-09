@@ -58,8 +58,8 @@ class Settings(BaseSettings):
 
     # --- Determinism ---
     # Default temperature is 0 for determinism; set LLM_TEMPERATURE>0 to override.
-    llm_temperature: float = Field(default=0.0, validation_alias="LLM_TEMPERATURE")
-    seed: int = Field(default=20260101, validation_alias="LLM_SEED")
+    llm_temperature: float = Field(default=0.0, ge=0.0, le=1.0, validation_alias="LLM_TEMPERATURE")
+    seed: int = Field(default=20260101, ge=0, validation_alias="LLM_SEED")
 
     # --- Paths ---
     data_dir: Path = Field(default=REPO_ROOT / "data", validation_alias="DATA_DIR")
@@ -76,9 +76,14 @@ class Settings(BaseSettings):
     # --- Feature toggles ---
     enable_literature_retrieval: bool = Field(default=True, validation_alias="ENABLE_LITERATURE_RETRIEVAL")
     enable_refinement_loop: bool = Field(default=True, validation_alias="ENABLE_REFINEMENT_LOOP")
-    max_refinement_iterations: int = Field(default=2, validation_alias="MAX_REFINEMENT_ITERATIONS")
-    completeness_threshold: float = Field(default=0.75, validation_alias="COMPLETENESS_THRESHOLD")
-    literature_target_papers: int = Field(default=20, validation_alias="LITERATURE_TARGET_PAPERS")
+    max_refinement_iterations: int = Field(default=2, ge=0, validation_alias="MAX_REFINEMENT_ITERATIONS")
+    completeness_threshold: float = Field(
+        default=0.75,
+        ge=0.0,
+        le=1.0,
+        validation_alias="COMPLETENESS_THRESHOLD",
+    )
+    literature_target_papers: int = Field(default=20, ge=1, validation_alias="LITERATURE_TARGET_PAPERS")
 
     def http_extra_headers(self) -> dict[str, str]:
         headers: dict[str, str] = {}

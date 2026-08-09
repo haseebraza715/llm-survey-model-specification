@@ -316,6 +316,7 @@ def process_survey_data(file_path: str, max_tokens: int = 500) -> list[dict[str,
     deduped_records = deduplicate_records(records)
 
     processed_chunks: list[dict[str, Any]] = []
+    used_chunk_ids: set[str] = set()
     for record in deduped_records:
         text = record["text"]
         chunks = chunk_text(text, max_tokens=max_tokens)
@@ -330,7 +331,18 @@ def process_survey_data(file_path: str, max_tokens: int = 500) -> list[dict[str,
         for chunk_idx, chunk in enumerate(chunks):
             metadata = extract_metadata(chunk, speaker_id=speaker_id, timestamp=timestamp)
             metadata.update(extra_metadata)
-            chunk_id = f"{speaker_id}_chunk_{chunk_idx}" if speaker_id else f"chunk_{original_index}_{chunk_idx}"
+            base_chunk_id = (
+                f"{speaker_id}_chunk_{chunk_idx}"
+                if speaker_id
+                else f"chunk_{original_index}_{chunk_idx}"
+            )
+            # The same speaker_id can legitimately appear in several records
+            # (e.g. multi-response longitudinal rows). Disambiguate so
+            # chunk-level provenance ids stay unique.
+            chunk_id = base_chunk_id
+            if chunk_id in used_chunk_ids:
+                chunk_id = f"{base_chunk_id}_{original_index}"
+            used_chunk_ids.add(chunk_id)
             processed_chunks.append(
                 {
                     "id": chunk_id,

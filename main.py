@@ -41,13 +41,13 @@ def run_complete_pipeline(
     use_rag: bool = True,
     perform_topic_analysis: bool = True,
     output_dir: str = "outputs",
-    llm_model: str = "google/gemma-4-31b-it",
-    base_url: str = "https://openrouter.ai/api/v1",
+    llm_model: str | None = None,
+    base_url: str | None = None,
     extra_headers: dict[str, str] | None = None,
-    enable_literature_retrieval: bool = True,
-    enable_refinement_loop: bool = True,
-    max_refinement_iterations: int = 2,
-    completeness_threshold: float = 0.75,
+    enable_literature_retrieval: bool | None = None,
+    enable_refinement_loop: bool | None = None,
+    max_refinement_iterations: int | None = None,
+    completeness_threshold: float | None = None,
 ) -> dict[str, Any]:
     """
     Run the complete pipeline from data processing to model extraction.
@@ -72,6 +72,26 @@ def run_complete_pipeline(
     # and headers; explicit args still win.
     from llm_survey.config import get_settings
     cfg = get_settings()
+    llm_model = llm_model or cfg.llm_model
+    base_url = base_url or cfg.openrouter_base_url
+    enable_literature_retrieval = (
+        enable_literature_retrieval
+        if enable_literature_retrieval is not None
+        else cfg.enable_literature_retrieval
+    )
+    enable_refinement_loop = (
+        enable_refinement_loop if enable_refinement_loop is not None else cfg.enable_refinement_loop
+    )
+    max_refinement_iterations = (
+        max_refinement_iterations
+        if max_refinement_iterations is not None
+        else cfg.max_refinement_iterations
+    )
+    completeness_threshold = (
+        completeness_threshold
+        if completeness_threshold is not None
+        else cfg.completeness_threshold
+    )
     extractor = RAGModelExtractor(
         openai_api_key=openrouter_api_key or os.getenv("OPENROUTER_API_KEY", ""),
         llm_model=llm_model,
@@ -336,16 +356,21 @@ def main():
     parser.add_argument("--interactive", "-I", action="store_true", help="Run in interactive mode")
     parser.add_argument("--create-sample", action="store_true", help="Create sample data")
     parser.add_argument("--output-dir", "-o", default="outputs", help="Output directory")
-    parser.add_argument("--llm-model", default="google/gemma-4-31b-it", help="OpenRouter model name")
-    parser.add_argument("--base-url", default="https://openrouter.ai/api/v1", help="OpenRouter-compatible base URL")
+    parser.add_argument("--llm-model", default=None, help="OpenRouter model name (defaults to LLM_MODEL / Settings)")
+    parser.add_argument("--base-url", default=None, help="OpenRouter-compatible base URL (defaults to OPENROUTER_BASE_URL / Settings)")
     parser.add_argument("--no-literature", action="store_true", help="Disable literature retrieval/enrichment")
     parser.add_argument("--no-refinement", action="store_true", help="Disable iterative refinement loop")
-    parser.add_argument("--max-refinement-iterations", type=int, default=2, help="Maximum refinement iterations")
+    parser.add_argument(
+        "--max-refinement-iterations",
+        type=int,
+        default=None,
+        help="Maximum refinement iterations (defaults to MAX_REFINEMENT_ITERATIONS / Settings)",
+    )
     parser.add_argument(
         "--completeness-threshold",
         type=float,
-        default=0.75,
-        help="Stop refinement when structural coverage heuristic reaches this threshold",
+        default=None,
+        help="Stop refinement when structural coverage heuristic reaches this threshold (defaults to COMPLETENESS_THRESHOLD / Settings)",
     )
     parser.add_argument("--http-referer", default="", help="Optional HTTP Referer header for OpenRouter")
     parser.add_argument("--x-title", default="", help="Optional X-Title header for OpenRouter")
