@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from enum import Enum
 from typing import Any, ClassVar
 
 from llm_survey.schemas.consolidation import (
@@ -122,23 +123,38 @@ def _dedupe_keep_order(values: Iterable[str]) -> list[str]:
     return output
 
 
-def _safe_direction(value: str) -> RelationshipDirection:
+def _enum_value(value: Any) -> Any:
+    """Return the plain value of an Enum member (e.g. from `model_dump()`)."""
+    return value.value if isinstance(value, Enum) else value
+
+
+def _safe_direction(value: Any) -> RelationshipDirection:
     try:
-        return RelationshipDirection(str(value).lower())
+        return RelationshipDirection(str(_enum_value(value)).lower())
     except ValueError:
         return RelationshipDirection.UNCLEAR
 
 
-def _safe_variable_type(value: str) -> VariableType:
+def _safe_int(value: Any) -> int:
+    """Parse an integer defensively (chroma metadata may hold arbitrary strings)."""
+    if value in (None, ""):
+        return 0
     try:
-        return VariableType(str(value).lower())
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_variable_type(value: Any) -> VariableType:
+    try:
+        return VariableType(str(_enum_value(value)).lower())
     except ValueError:
         return VariableType.CONTEXTUAL
 
 
-def _safe_evidence_strength(value: str) -> EvidenceStrength:
+def _safe_evidence_strength(value: Any) -> EvidenceStrength:
     try:
-        return EvidenceStrength(str(value).lower())
+        return EvidenceStrength(str(_enum_value(value)).lower())
     except ValueError:
         return EvidenceStrength.WEAK
 
@@ -189,7 +205,7 @@ class _HypothesisMention:
 class _ModeratorMention:
     name: str
     quote: str
-    chunk_id: str
+    chunk_ids: list[str]
     target_relationship: str = ""
     rationale: str = ""
 
@@ -567,13 +583,15 @@ class ModelConsolidator:
                     buckets[key] = _ModeratorMention(
                         name=name,
                         quote=quote,
-                        chunk_id=chunk_id,
+                        chunk_ids=[chunk_id] if chunk_id else [],
                         target_relationship=target_relationship,
                         rationale=rationale,
                     )
                 else:
                     if quote and quote.lower() not in existing.quote.lower():
                         existing.quote = existing.quote + " | " + quote if existing.quote else quote
+                    if chunk_id and chunk_id not in existing.chunk_ids:
+                        existing.chunk_ids.append(chunk_id)
                     existing.rationale = existing.rationale or rationale
 
         moderators = [
@@ -581,7 +599,7 @@ class ModelConsolidator:
                 name=mention.name,
                 target_relationship=mention.target_relationship,
                 rationale=mention.rationale,
-                source_chunk_ids=[mention.chunk_id] if mention.chunk_id else [],
+                source_chunk_ids=sorted(mention.chunk_ids),
                 supporting_quotes=_dedupe_keep_order(mention.quote.split(" | ")) if mention.quote else [],
             )
             for mention in buckets.values()
@@ -805,14 +823,17 @@ class ConflictDetector:
 
         score_a = 0.0
         score_b = 0.0
-        for match in matches:
-            text = _normalize_whitespace(match.get("text", "")).lower()
-            citation_count = int((match.get("metadata") or {}).get("citation_count", 0) or 0)
-            weight = math.log(citation_count + 1) + 1.0
-            if self._text_matches_direction(text, version_a.direction):
-                score_a += weight
-            if self._text_matches_direction(text, version_b.direction):
-                score_b += weight
+        try:
+            for match in matches:
+                text = _normalize_whitespace(match.get("text", "")).lower()
+                citation_count = _safe_int((match.get("metadata") or {}).get("citation_count"))
+                weight = math.log(citation_count + 1) + 1.0
+                if self._text_matches_direction(text, version_a.direction):
+                    score_a += weight
+                if self._text_matches_direction(text, version_b.direction):
+                    score_b += weight
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError, AttributeError):
+            return None
 
         if score_a == score_b:
             return None
@@ -898,6 +919,17 @@ class LiteratureValidator:
             novelty_flag=novelty_flag,
         )
 
+    @staticmethod
+    def _safe_year(value: Any) -> int | None:
+        """Parse a publication year defensively (chroma metadata may hold strings)."""
+        if value in (None, ""):
+            return None
+        match = re.match(r"(\d+)", str(value).strip())
+        if match is None:
+            return None
+        parsed = int(match.group(1))
+        return parsed if 1000 <= parsed <= 9999 else None
+
     def _to_paper_reference(self, match: Mapping[str, Any], hypothesis: ScoredHypothesis) -> PaperReference:
         metadata = dict(match.get("metadata") or {})
         title = _normalize_whitespace(metadata.get("title", "Untitled")) or "Untitled"
@@ -910,8 +942,8 @@ class LiteratureValidator:
             paper_id=str(metadata.get("paper_id", title)),
             title=title,
             authors=authors,
-            year=int(metadata["year"]) if metadata.get("year") not in (None, "") else None,
-            citation_count=int(metadata.get("citation_count", 0) or 0),
+            year=self._safe_year(metadata.get("year")),
+            citation_count=_safe_int(metadata.get("citation_count")),
             relevant_excerpt=excerpt,
             stance=stance,
         )

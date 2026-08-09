@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import urllib.error
 from collections import Counter
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -173,7 +175,7 @@ class RAGModelExtractor:
             run_id=self.run_id,
             model=self.llm_model,
             temperature=float(self.temperature),
-            seed=20260101,
+            seed=self._seed_from_env(),
             embedding_model=self.embedding_model_name,
         )
         try:
@@ -185,6 +187,18 @@ class RAGModelExtractor:
         except Exception:  # pragma: no cover - registry is optional
             pass
         self.run_log.attach_lockfile_hash()
+
+    @staticmethod
+    def _seed_from_env() -> int:
+        """Resolve the eval/runlog RNG seed from `LLM_SEED` (Settings.seed).
+
+        Kept env-only (like the API key) so tests can control it via
+        `monkeypatch` without touching the pydantic-settings layer.
+        """
+        try:
+            return int(os.getenv("LLM_SEED", "20260101"))
+        except ValueError:  # pragma: no cover - malformed env value must not crash the pipeline
+            return 20260101
 
     @staticmethod
     def _usage_from_raw(raw: Any) -> tuple[int | None, int | None]:
@@ -234,6 +248,40 @@ class RAGModelExtractor:
             wall_seconds=wall_seconds,
             phase=phase,
         )
+
+    def _timed_llm_call(
+        self,
+        *,
+        phase: str | None,
+        prompt_text: str,
+        fn: Callable[[], tuple[Any, Any]],
+        completion_extractor: Callable[[Any], str] | None = None,
+    ) -> tuple[Any, Any]:
+        """Run one LLM call and record timing/tokens on both success and failure.
+
+        `fn` must return `(result, raw_completion)`; `raw_completion` may be
+        None when the provider/SDK does not surface a usage object. On failure
+        the call is recorded with empty completion and the exception re-raised
+        so callers can classify it (api_error vs parse_error).
+        """
+        t0 = time.perf_counter()
+        try:
+            result, raw_completion = fn()
+        except Exception:
+            self._record_llm_call(
+                phase=phase,
+                wall_seconds=time.perf_counter() - t0,
+                prompt_text=prompt_text,
+            )
+            raise
+        self._record_llm_call(
+            phase=phase,
+            wall_seconds=time.perf_counter() - t0,
+            prompt_text=prompt_text,
+            completion_text=completion_extractor(result) if completion_extractor else "",
+            raw_completion=raw_completion,
+        )
+        return result, raw_completion
 
     def dump_run_artifacts(self, output_dir: str) -> dict[str, str]:
         """Write `cost_report.json` + `runlog.json` for the current run.
@@ -428,11 +476,9 @@ class RAGModelExtractor:
             "failure_kind": None,
         }
 
-        import time as _time
-        _t0 = _time.perf_counter()
         _full_prompt = EXTRACTION_SYSTEM_PROMPT + "\n" + prompt
-        _raw_completion: Any = None
-        try:
+
+        def _call() -> tuple[Any, Any]:
             # Prefer `create_with_completion` so we can read real
             # `usage.prompt_tokens` / `completion_tokens` from the raw chat
             # completion. Fall back to `create(...)` for older `instructor`
@@ -449,16 +495,17 @@ class RAGModelExtractor:
                 ],
             )
             if hasattr(_completions, "create_with_completion"):
-                response_model, _raw_completion = _completions.create_with_completion(**_create_kwargs)
-            else:
-                response_model = _completions.create(**_create_kwargs)
-                _raw_completion = None
-        except (RateLimitError, APITimeoutError, APIConnectionError, AuthenticationError, BadRequestError, APIError) as err:
-            self._record_llm_call(
+                return _completions.create_with_completion(**_create_kwargs)
+            return _completions.create(**_create_kwargs), None
+
+        try:
+            response_model, _raw_completion = self._timed_llm_call(
                 phase="extraction",
-                wall_seconds=_time.perf_counter() - _t0,
                 prompt_text=_full_prompt,
+                fn=_call,
+                completion_extractor=lambda model: model.model_dump_json(),
             )
+        except (RateLimitError, APITimeoutError, APIConnectionError, AuthenticationError, BadRequestError, APIError) as err:
             return {
                 **base_out,
                 "model": None,
@@ -468,11 +515,6 @@ class RAGModelExtractor:
                 "failure_kind": "api_error",
             }
         except (ValidationError, json.JSONDecodeError, TypeError, ValueError) as err:
-            self._record_llm_call(
-                phase="extraction",
-                wall_seconds=_time.perf_counter() - _t0,
-                prompt_text=_full_prompt,
-            )
             return {
                 **base_out,
                 "model": None,
@@ -481,17 +523,19 @@ class RAGModelExtractor:
                 "error": str(err),
                 "failure_kind": "parse_error",
             }
+        except Exception as err:  # instructor/provider errors that are not OpenAI subclasses
+            return {
+                **base_out,
+                "model": None,
+                "raw_response": "",
+                "success": False,
+                "error": str(err),
+                "failure_kind": "api_error",
+            }
 
         _completion_text = response_model.model_dump_json()
-        self._record_llm_call(
-            phase="extraction",
-            wall_seconds=_time.perf_counter() - _t0,
-            prompt_text=_full_prompt,
-            completion_text=_completion_text,
-            raw_completion=_raw_completion,
-        )
 
-        model_dict = response_model.model_dump()
+        model_dict = response_model.model_dump(mode="json")
         _inject_provenance(model_dict, chunk_id)
         if _is_empty_extraction(response_model):
             return {
@@ -565,7 +609,7 @@ class RAGModelExtractor:
         """Detect cross-chunk gaps and score completeness/testability."""
         with self.recorder.phase("gap_detection"):
             report_model = self.gap_detector.detect(extraction_results)
-            report = report_model.model_dump()
+            report = report_model.model_dump(mode="json")
 
         if save_results:
             suffix = f"_{output_suffix}" if output_suffix else ""
@@ -592,7 +636,7 @@ class RAGModelExtractor:
                 literature_store=self.literature_store,
                 auto_answer_top_k=auto_answer_top_k,
             )
-            plan = plan_model.model_dump()
+            plan = plan_model.model_dump(mode="json")
 
         if save_results:
             suffix = f"_{output_suffix}" if output_suffix else ""
@@ -618,7 +662,7 @@ class RAGModelExtractor:
             gap_report=gap_report or {},
             clarification_plan=clarification_plan or {},
         )
-        payload = model.model_dump()
+        payload = model.model_dump(mode="json")
         if save_results:
             self._write_json("outputs/consolidated_model.json", payload)
             self._write_json(f"outputs/consolidated_model_{self.run_id}.json", payload)
@@ -636,7 +680,7 @@ class RAGModelExtractor:
             extraction_results=extraction_results,
             literature_store=self.literature_store if self.enable_literature_retrieval else None,
         )
-        payload = report.model_dump()
+        payload = report.model_dump(mode="json")
         if save_results:
             self._write_json("outputs/conflict_report.json", payload)
             self._write_json(f"outputs/conflict_report_{self.run_id}.json", payload)
@@ -652,7 +696,7 @@ class RAGModelExtractor:
             hypotheses=[ScoredHypothesis.model_validate(row) for row in consolidated_model.get("hypotheses", [])],
             literature_store=self.literature_store if self.enable_literature_retrieval else None,
         )
-        payload = report.model_dump()
+        payload = report.model_dump(mode="json")
         if save_results:
             self._write_json("outputs/literature_validation_report.json", payload)
             self._write_json(f"outputs/literature_validation_report_{self.run_id}.json", payload)
@@ -861,6 +905,18 @@ class RAGModelExtractor:
                 rep.get("structural_coverage_score", rep.get("overall_model_completeness", 0.0)) or 0.0
             )
 
+        def _record_iteration(iteration: int) -> None:
+            history.append(
+                {
+                    "iteration": iteration,
+                    "completeness": _coverage(current_gap_report),
+                    "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
+                    "gap_count": len(current_gap_report.get("gaps", [])),
+                    "question_count": len(current_clarification_plan.get("questions", [])),
+                    "auto_answer_count": len(current_clarification_plan.get("auto_answers", [])),
+                }
+            )
+
         history: list[dict[str, Any]] = [
             {
                 "iteration": 0,
@@ -910,34 +966,12 @@ class RAGModelExtractor:
             )
 
             new_coverage = _coverage(current_gap_report)
+            iterations_completed = iteration
+            _record_iteration(iteration)
             if new_coverage - prior_coverage < 0.05:
                 stop_reason = "convergence_no_coverage_gain"
-                iterations_completed = iteration
-                history.append(
-                    {
-                        "iteration": iteration,
-                        "completeness": new_coverage,
-                        "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
-                        "gap_count": len(current_gap_report.get("gaps", [])),
-                        "question_count": len(current_clarification_plan.get("questions", [])),
-                        "auto_answer_count": len(current_clarification_plan.get("auto_answers", [])),
-                    }
-                )
-                prior_coverage = new_coverage
                 break
-
             prior_coverage = new_coverage
-            iterations_completed = iteration
-            history.append(
-                {
-                    "iteration": iteration,
-                    "completeness": new_coverage,
-                    "testability": float(current_gap_report.get("model_testability_score", 0.0) or 0.0),
-                    "gap_count": len(current_gap_report.get("gaps", [])),
-                    "question_count": len(current_clarification_plan.get("questions", [])),
-                    "auto_answer_count": len(current_clarification_plan.get("auto_answers", [])),
-                }
-            )
 
         if stop_reason == "max_iterations_reached":
             final_completeness = _coverage(current_gap_report)
@@ -995,10 +1029,7 @@ class RAGModelExtractor:
         return ""
 
     def _call_yaml(self, prompt: str) -> dict[str, Any]:
-        import time as _time
-        _t0 = _time.perf_counter()
-        completion: Any = None
-        try:
+        def _call() -> tuple[Any, Any]:
             completion = self.client.chat.completions.create(
                 model=self.llm_model,
                 temperature=self.temperature,
@@ -1007,21 +1038,18 @@ class RAGModelExtractor:
                     {"role": "user", "content": prompt},
                 ],
             )
-            raw_response = self._safe_completion_text(completion)
-        except (RateLimitError, APITimeoutError, APIConnectionError, AuthenticationError, BadRequestError, APIError) as err:
-            self._record_llm_call(
+            return completion, completion
+
+        try:
+            completion, _ = self._timed_llm_call(
                 phase=None,
-                wall_seconds=_time.perf_counter() - _t0,
                 prompt_text=prompt,
+                fn=_call,
+                completion_extractor=self._safe_completion_text,
             )
+        except Exception as err:
             return {"payload": None, "raw_response": "", "success": False, "error": str(err)}
-        self._record_llm_call(
-            phase=None,
-            wall_seconds=_time.perf_counter() - _t0,
-            prompt_text=prompt,
-            completion_text=raw_response,
-            raw_completion=completion,
-        )
+        raw_response = self._safe_completion_text(completion)
         try:
             return {"payload": yaml.safe_load(raw_response), "raw_response": raw_response, "success": True}
         except yaml.YAMLError as err:

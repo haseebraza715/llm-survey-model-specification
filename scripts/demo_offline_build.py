@@ -129,10 +129,10 @@ def main() -> None:
     chunk_lookup = _chunk_lookup()
 
     # Phase 4: cross-chunk gap detection + coverage/testability scores.
-    gap_report = CrossChunkGapDetector().detect(extractions).model_dump()
+    gap_report = CrossChunkGapDetector().detect(extractions).model_dump(mode="json")
 
     # Phase 5: clarification planning (offline => researcher-routed questions).
-    clarification_plan = ClarificationAgent().build_plan(gap_report=gap_report).model_dump()
+    clarification_plan = ClarificationAgent().build_plan(gap_report=gap_report).model_dump(mode="json")
 
     # Phase 7a: consolidation.
     consolidated = ModelConsolidator().consolidate(
@@ -140,20 +140,20 @@ def main() -> None:
         gap_report=gap_report,
         clarification_plan=clarification_plan,
     )
-    model_payload = consolidated.model_dump()
+    model_payload = consolidated.model_dump(mode="json")
 
     # Phase 7b: contradiction detection (deterministic rules only, no lit store).
     conflict_report = ConflictDetector().detect(
         consolidated_model=ConsolidatedModel.model_validate(model_payload),
         extraction_results=extractions,
         literature_store=None,
-    ).model_dump()
+    ).model_dump(mode="json")
 
     # Phase 7c: literature validation (offline => empty literature store).
     validation_report = LiteratureValidator().validate(
         hypotheses=[ScoredHypothesis.model_validate(h) for h in model_payload.get("hypotheses", [])],
         literature_store=None,
-    ).model_dump()
+    ).model_dump(mode="json")
 
     merged_model = _merge_validation_into_model(model_payload, conflict_report)
 
