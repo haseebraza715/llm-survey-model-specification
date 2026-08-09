@@ -2,16 +2,36 @@
 
 from __future__ import annotations
 
+import hashlib
 import html
 import json
+import re
 import zipfile
 from collections.abc import Mapping, Sequence
+from enum import Enum
 from io import BytesIO
 from typing import Any
 
 import yaml
 
 from llm_survey.prompts.model_extraction_prompts import EXTRACTION_SYSTEM_PROMPT
+
+
+def _jsonable(payload: Any) -> Any:
+    """Recursively convert payloads to plain JSON-safe values.
+
+    Pydantic `model_dump()` (default python mode) keeps enum members in place;
+    those are str subclasses so `json.dump` tolerates them, but `yaml.safe_dump`
+    raises RepresenterError. This normalizes enums to their `.value` so every
+    export path can consume pipeline outputs safely.
+    """
+    if isinstance(payload, Enum):
+        return payload.value
+    if isinstance(payload, dict):
+        return {key: _jsonable(value) for key, value in payload.items()}
+    if isinstance(payload, (list, tuple)):
+        return [_jsonable(value) for value in payload]
+    return payload
 
 
 def _coverage(gap_report: Mapping[str, Any] | None) -> float:
@@ -24,8 +44,8 @@ def _coverage(gap_report: Mapping[str, Any] | None) -> float:
 
 def _plain(payload: Any) -> Any:
     if hasattr(payload, "model_dump"):
-        return payload.model_dump()
-    return payload
+        return _jsonable(payload.model_dump())
+    return _jsonable(payload)
 
 
 def _validation_map(validations: Any) -> dict[str, dict[str, Any]]:
@@ -213,13 +233,14 @@ def build_json_export_bundle(
     chunk_lookup: Mapping[str, str],
     failure_summary: Mapping[str, Any] | None,
 ) -> str:
+    system_sha = hashlib.sha256(EXTRACTION_SYSTEM_PROMPT.encode("utf-8")).hexdigest()
     return json.dumps(
         {
             "extraction_results": list(extraction_results),
             "gap_report": dict(gap_report or {}),
             "chunk_text_by_id": dict(chunk_lookup),
             "failure_summary": dict(failure_summary or {}),
-            "system_prompt_sha_note": "SHA not computed; system prompt is versioned in repo.",
+            "system_prompt_sha256": system_sha,
             "system_prompt_length": len(EXTRACTION_SYSTEM_PROMPT),
         },
         indent=2,
@@ -297,16 +318,42 @@ def build_final_model_spec_yaml(
     return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
 
 
+_MERMAID_NODE_RE = re.compile(r"[^A-Za-z0-9_ ]")
+
+
+def _mermaid_node_id(name: str) -> str:
+    """Sanitize a variable name into a mermaid-safe node id (unique per name)."""
+    cleaned = _MERMAID_NODE_RE.sub("", str(name or ""))
+    cleaned = re.sub(r"\s+", " ", cleaned).strip().replace(" ", "_")
+    return cleaned or "unlabeled"
+
+
 def build_mermaid_diagram(consolidated_model: Mapping[str, Any] | Any) -> str:
     model = _plain(consolidated_model) or {}
     lines = ["graph LR"]
+    node_ids: dict[str, str] = {}
     for row in model.get("relationships", []):
-        from_name = str(row.get("from_variable", "")).replace(" ", "")
-        to_name = str(row.get("to_variable", "")).replace(" ", "")
+        from_name = str(row.get("from_variable", "")).strip()
+        to_name = str(row.get("to_variable", "")).strip()
         if not from_name or not to_name:
             continue
-        label = f"{row.get('direction', 'unclear')}, conf:{float(row.get('confidence', 0.0)):.2f}".replace('"', "'")
-        lines.append(f'    {from_name} -->|"{label}"| {to_name}')
+        from_id = _mermaid_node_id(from_name)
+        to_id = _mermaid_node_id(to_name)
+        node_ids.setdefault(from_id, from_name)
+        node_ids.setdefault(to_id, to_name)
+    for node_id, display in node_ids.items():
+        safe_display = str(display).replace('"', "'")
+        lines.append(f'    {node_id}["{safe_display}"]')
+    for row in model.get("relationships", []):
+        from_name = str(row.get("from_variable", "")).strip()
+        to_name = str(row.get("to_variable", "")).strip()
+        if not from_name or not to_name:
+            continue
+        label = f"{row.get('direction', 'unclear')}, conf:{float(row.get('confidence', 0.0)):.2f}"
+        label = label.replace('"', "'").replace("|", "/")
+        lines.append(
+            f'    {_mermaid_node_id(from_name)} -->|"{label}"| {_mermaid_node_id(to_name)}'
+        )
     return "\n".join(lines)
 
 
